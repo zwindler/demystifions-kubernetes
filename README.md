@@ -48,6 +48,13 @@ etcdctl version: 3.5.6
 API version: 3.5
 ```
 
+Create a directory to host etcd database files
+
+```
+mkdir etcd-data
+chmod 700 etcd-data
+```
+
 ### containerd
 
 Note: Jérôme was using Docker but since Kubernetes 1.24, dockershim, the component responsible for bridging the gap between docker daemon and kubernetes is no longer supported. I (like many other) switched to `containerd` but there are alternatives.
@@ -62,4 +69,121 @@ rm containerd-1.6.10-linux-amd64.tar.gz
 
 Even though this tutorial could be run without having any TLS encryption between components (like Jérôme did), for fun (and profit) I'd rather use encryption everywhere.
 
-## Kubernetes boot
+Create a dir for all certs and then generate a CA
+
+```
+mkdir certs && cd certs
+openssl genrsa -aes256 -out ca.key 4096
+
+#create a variable for you subject
+SUBJECT='/CN=zwindler/C=FR/ST=NAQ/L=Pessac/O=zwindler'
+
+openssl req -x509 -new -nodes -key ca.key -sha256 -days 1826 -out ca.crt -subj ${SUBJECT}
+```
+
+Check your IP address and store it
+
+```
+ip a l
+
+#then find your IP or the IP of your server and create a variable for it
+LOCALIP=192.168.1.41
+```
+
+Generate the etcd certificates
+
+```
+for CERT in etcd apiserver scheduler controller-manager service-account kubelet admin kube-proxy; do
+  openssl req -new -nodes -out ${CERT}.csr -newkey rsa:4096 -keyout ${CERT}.key -subj ${SUBJECT}
+  # create a v3 ext file for SAN properties
+  cat > ${CERT}.v3.ext << EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+[alt_names]
+IP.1 = 127.0.0.1
+IP.2 = ${LOCALIP}
+EOF
+
+  openssl x509 -req -in ${CERT}.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out ${CERT}.crt -days 730 -sha256 -extfile ${CERT}.v3.ext
+done
+```
+
+Get back in main dir
+
+```
+cd ..
+```
+
+### Misc
+
+To ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends.
+
+Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) ;-)
+
+`curl` is also a nice addition to play with API server.
+
+Install those.
+
+Also, al lot of files will be created in various places. Running as root for this tutorial will save you from a world of pain. 
+
+Just don't do it outside of here (please).
+
+## Kubernetes bootstrap
+
+### Client Authentication Configs
+
+```
+./kubectl config set-cluster demystifions-kubernetes \
+  --certificate-authority=certs/ca.crt \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443 \
+  --kubeconfig=admin.kubeconfig
+
+./kubectl config set-credentials admin \
+  --client-certificate=certs/admin.crt \
+  --client-key=certs/admin.key \
+  --kubeconfig=admin.kubeconfig
+
+./kubectl config set-context demystifions-kubernetes \
+  --cluster=demystifions-kubernetes \
+  --user=admin \
+  --kubeconfig=admin.kubeconfig
+
+./kubectl config use-context demystifions-kubernetes --kubeconfig=admin.conf
+
+sudo mkdir /etc/kubernetes
+sudo cp admin.conf /etc/kubernetes
+```
+
+### etcd
+
+We can't start the API server until we have an etcd backend to support it's persistance. So let's start with `etcd` command
+
+```
+#launch tmux
+tmux new -t etcd
+
+./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.crt --cert-file=certs/etcd.crt --key-file=certs/etcd.key --advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
+  
+[...]
+{"level":"info","ts":"2022-11-24T20:30:46.132+0100","caller":"embed/serve.go:100","msg":"ready to serve client requests"}
+{"level":"info","ts":"2022-11-24T20:30:46.133+0100","caller":"etcdmain/main.go:44","msg":"notifying init daemon"}
+{"level":"info","ts":"2022-11-24T20:30:46.133+0100","caller":"etcdmain/main.go:50","msg":"successfully notified init daemon"}
+{"level":"info","ts":"2022-11-24T20:30:46.135+0100","caller":"embed/serve.go:146","msg":"serving client traffic insecurely; this is strongly discouraged!","address":"127.0.0.1:2379"}
+```
+
+### kube-apiserver
+
+```
+#create a new tmux session
+'[ctrl]-b' and then ': new -s apiserver'
+./kube-apiserver --etcd-servers=https://127.0.0.1:2379 \
+  --etcd-cafile=certs/ca.crt --etcd-certfile=certs/etcd.crt --etcd-keyfile=certs/etcd.key \
+  --service-account-key-file=certs/service-account.crt  --service-account-signing-key-file=certs/service-account.key --service-account-issuer=https://kubernetes.default.svc.cluster.local \
+  --tls-cert-file=certs/apiserver.crt --tls-private-key-file=certs/apiserver.key
+```
+
+Note: you can then switch between sessions with '[ctrl]-b' and then '(' or ')'
+
