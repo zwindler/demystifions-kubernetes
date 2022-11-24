@@ -19,14 +19,7 @@ rm kubernetes-server-linux-amd64.tar.gz
 rm -rf kubernetes
 ```
 
-For convenience, create a handful of symlinks. This is not strictly necessary, but if we don't, we will have to prefix every command with hyperkube, for instance hyperkube kubectl get nodes.
-
-```
-for BINARY in kubectl kube-apiserver kube-scheduler kube-controller-manager kubelet kube-proxy;
-do
-  ln -s hyperkube $BINARY
-done
-```
+Note: jpetazzo's repo mention a all-in-one binary call hyperkube which doesn't seem to exist anymore
 
 ### etcd
 
@@ -54,3 +47,19 @@ $ etcdctl version
 etcdctl version: 3.5.6
 API version: 3.5
 ```
+
+### containerd
+
+Note: Jérôme was using Docker but since Kubernetes 1.24, dockershim, the component responsible for bridging the gap between docker daemon and kubernetes is no longer supported. I (like many other) switched to `containerd` but there are alternatives.
+
+```
+wget https://github.com/containerd/containerd/releases/download/v1.6.10/containerd-1.6.10-linux-amd64.tar.gz
+tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' -f containerd-1.6.10-linux-amd64.tar.gz
+rm containerd-1.6.10-linux-amd64.tar.gz
+```
+
+### Certificates
+
+Even though this tutorial could be run without having any TLS encryption between components (like Jérôme did), for fun (and profit) I'd rather use encryption everywhere.
+
+## Kubernetes boot
