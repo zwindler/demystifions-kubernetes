@@ -126,35 +126,38 @@ Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) ;-)
 
 Install those.
 
-Also, al lot of files will be created in various places. Running as root for this tutorial will save you from a world of pain. 
+### Warning
 
-Just don't do it outside of here (please).
+Last but not least, a lot of files will be created in various places. **Running as root for this tutorial will save you from a world of pain**, even though this is really bad practice. Just don't do it outside of here (please).
 
 ## Kubernetes bootstrap
 
-### Client Authentication Configs
+### Authentication Configs
+
+We will create the admin kube config file in /etc/kubernetes/admin.conf
 
 ```
-./kubectl config set-cluster demystifions-kubernetes \
+#launch tmux as root
+tmux new -t terminal
+
+export KUBECONFIG=/etc/kubernetes/admin.conf
+export PATH=$PATH:${pwd}
+
+mkdir /etc/kubernetes
+kubectl config set-cluster demystifions-kubernetes \
   --certificate-authority=certs/ca.crt \
   --embed-certs=true \
-  --server=https://127.0.0.1:6443 \
-  --kubeconfig=admin.kubeconfig
+  --server=https://127.0.0.1:6443
 
-./kubectl config set-credentials admin \
+kubectl config set-credentials admin \
   --client-certificate=certs/admin.crt \
-  --client-key=certs/admin.key \
-  --kubeconfig=admin.kubeconfig
+  --client-key=certs/admin.key
 
-./kubectl config set-context demystifions-kubernetes \
+kubectl config set-context demystifions-kubernetes \
   --cluster=demystifions-kubernetes \
-  --user=admin \
-  --kubeconfig=admin.kubeconfig
+  --user=admin
 
-./kubectl config use-context demystifions-kubernetes --kubeconfig=admin.conf
-
-sudo mkdir /etc/kubernetes
-sudo cp admin.conf /etc/kubernetes
+kubectl config use-context demystifions-kubernetes
 ```
 
 ### etcd
@@ -162,8 +165,8 @@ sudo cp admin.conf /etc/kubernetes
 We can't start the API server until we have an etcd backend to support it's persistance. So let's start with `etcd` command
 
 ```
-#launch tmux
-tmux new -t etcd
+#create a new tmux session for etcd
+'[ctrl]-b' and then ': new -s etcd'
 
 ./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.crt --cert-file=certs/etcd.crt --key-file=certs/etcd.key --advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
   
@@ -177,13 +180,28 @@ tmux new -t etcd
 ### kube-apiserver
 
 ```
-#create a new tmux session
+#create a new tmux session for apiserver
 '[ctrl]-b' and then ': new -s apiserver'
-./kube-apiserver --etcd-servers=https://127.0.0.1:2379 \
+./kube-apiserver --authorization-mode=Node,RBAC --etcd-servers=https://127.0.0.1:2379 \
   --etcd-cafile=certs/ca.crt --etcd-certfile=certs/etcd.crt --etcd-keyfile=certs/etcd.key \
-  --service-account-key-file=certs/service-account.crt  --service-account-signing-key-file=certs/service-account.key --service-account-issuer=https://kubernetes.default.svc.cluster.local \
+  --service-account-key-file=certs/service-account.crt --service-account-signing-key-file=certs/service-account.key --service-account-issuer=https://kubernetes.default.svc.cluster.local \
   --tls-cert-file=certs/apiserver.crt --tls-private-key-file=certs/apiserver.key
 ```
 
 Note: you can then switch between sessions with '[ctrl]-b' and then '(' or ')'
 
+Get back to "terminal" tmux session and check that API server responds
+
+```bash
+'[ctrl-b]-b' and then ': attach -t terminal'
+
+kubectl version --short
+```
+
+You should get a similar output
+
+```
+Client Version: v1.25.4
+Kustomize Version: v4.5.7
+Server Version: v1.25.4
+```
