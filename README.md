@@ -65,6 +65,15 @@ tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' -f containerd-1.
 rm containerd-1.6.10-linux-amd64.tar.gz
 ```
 
+### Misc
+
+We need `cfssl` tool to generate certificates. Install it.
+
+
+Optionnaly, to ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends. Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) ;-)
+
+Optionnaly as well, `curl` is a nice addition to play with API server.
+
 ### Certificates
 
 Even though this tutorial could be run without having any TLS encryption between components (like Jérôme did), for fun (and profit) I'd rather use encryption everywhere.
@@ -73,63 +82,168 @@ Create a dir for all certs and then generate a CA
 
 ```
 mkdir certs && cd certs
-openssl genrsa -aes256 -out ca-key.pem 4096
 
-#create a variable for you subject
-SUBJECT='/CN=ca/C=FR/ST=NAQ/L=Pessac/O=zwindler'
+TODO see https://github.com/kelseyhightower/kubernetes-the-hard-way/blob/master/docs/04-certificate-authority.md
 
-openssl req -x509 -new -nodes -key ca-key.pem -sha256 -days 1826 -out ca.pem -subj ${SUBJECT}
-```
+{
 
-Check your IP address and store it
-
-```
-ip a l
-
-#then find your IP or the IP of your server and create a variable for it
-LOCALIP=192.168.1.41
-```
-
-Generate the etcd certificates
-
-```
-for CERT in etcd apiserver scheduler controller-manager service-account kubelet kube-proxy; do
-  SUBJECT='/CN=${CERT}/C=FR/ST=NAQ/L=Pessac/O=zwindler'
-  openssl req -new -nodes -out ${CERT}.csr -newkey rsa:4096 -keyout ${CERT}.key -subj ${SUBJECT}
-  # create a v3 ext file for SAN properties
-  cat > ${CERT}.v3.ext << EOF
-authorityKeyIdentifier=keyid,issuer
-basicConstraints=CA:FALSE
-keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
-subjectAltName = @alt_names
-[alt_names]
-IP.1 = 127.0.0.1
-IP.2 = ${LOCALIP}
+cat > ca-config.json <<EOF
+{
+  "signing": {
+    "default": {
+      "expiry": "8760h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": ["signing", "key encipherment", "server auth", "client auth"],
+        "expiry": "8760h"
+      }
+    }
+  }
+}
 EOF
 
-  openssl x509 -req -in ${CERT}.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out ${CERT}.crt -days 730 -sha256 -extfile ${CERT}.v3.ext
-done
-```
-
-Generate the all mighty admin which must have O=system:masters
-
-```
-CERT=admin
-SUBJECT='/CN=admin/C=FR/ST=NAQ/L=Pessac/O=system:masters'
-openssl req -new -nodes -out ${CERT}.csr -newkey rsa:4096 -keyout ${CERT}.key -subj ${SUBJECT}
-# create a v3 ext file for SAN properties
-  cat > ${CERT}.v3.ext << EOF
-authorityKeyIdentifier=keyid,issuer
-basicConstraints=CA:FALSE
-keyUsage = digitalSignature, keyEncipherment
-extendedKeyUsage=clientAuth
-subjectAltName = @alt_names
-[alt_names]
-IP.1 = 127.0.0.1
-IP.2 = ${LOCALIP}
+cat > ca-csr.json <<EOF
+{
+  "CN": "Kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "CA",
+      "ST": "Oregon"
+    }
+  ]
+}
 EOF
 
-openssl x509 -req -in ${CERT}.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out ${CERT}.crt -days 730 -sha256 -extfile ${CERT}.v3.ext
+cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+
+}
+
+{
+
+cat > admin-csr.json <<EOF
+{
+  "CN": "admin",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:masters",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  admin-csr.json | cfssljson -bare admin
+
+}
+
+{
+
+cat > kube-controller-manager-csr.json <<EOF
+{
+  "CN": "system:kube-controller-manager",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:kube-controller-manager",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
+
+}
+
+{
+
+cat > kube-scheduler-csr.json <<EOF
+{
+  "CN": "system:kube-scheduler",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:kube-scheduler",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  kube-scheduler-csr.json | cfssljson -bare kube-scheduler
+
+}
+
+cat > kubernetes-csr.json <<EOF
+{
+  "CN": "kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -hostname=${LOCALIP},127.0.0.1 \
+  -profile=kubernetes \
+  kubernetes-csr.json | cfssljson -bare kubernetes
+
+}
 ```
 
 Get back in main dir
@@ -137,16 +251,6 @@ Get back in main dir
 ```
 cd ..
 ```
-
-### Misc
-
-To ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends.
-
-Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) ;-)
-
-`curl` is also a nice addition to play with API server.
-
-Install those.
 
 ### Warning
 
@@ -207,7 +311,7 @@ Now we can start the apiserver
 ```
 #create a new tmux session for apiserver
 '[ctrl]-b' and then ': new -s apiserver'
-./kube-apiserver --authorization-mode=Node,RBAC \
+./kube-apiserver --authorization-mode=Node,RBAC --client-ca-file=certs/ca.pem\
   --etcd-servers=https://127.0.0.1:2379 --etcd-cafile=certs/ca.pem --etcd-certfile=certs/kubernetes.pem --etcd-keyfile=certs/kubernetes-key.pem \
   --service-account-key-file=certs/service-account.pem --service-account-signing-key-file=certs/service-account-key.pem --service-account-issuer=https://kubernetes.default.svc.cluster.local \
   --tls-cert-file=certs/kubernetes.pem --tls-private-key-file=certs/kubernetes-key.pem
@@ -234,14 +338,18 @@ Server Version: v1.25.4
 We can try to deploy a Deployment and see that the Deployment is created but not the Pods.
 
 ```
-kubectl get deployment
-TODO
+kubectl create deployment web --image=nginx
+deployment.apps/web created
+
+kubectl get deploy
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+web    0/1     0            0           3m38s
 
 kubectl get pods
-TODO
+No resources found in default namespace.
 ```
 
-This is because most of Kubernetes magic is done by the kubernetes Controller manager (and the controllers it controls. Typically here, creating a Deployment will trigger the creation of a Replicaset, which in turn will create Pods.
+This is because most of Kubernetes magic is done by the kubernetes **Controller manager** (and the controllers it controls). Typically here, creating a Deployment will trigger the creation of a Replicaset, which in turn will create our Pods.
 
 ### kube-controller-manager
 
