@@ -73,12 +73,12 @@ Create a dir for all certs and then generate a CA
 
 ```
 mkdir certs && cd certs
-openssl genrsa -aes256 -out ca.key 4096
+openssl genrsa -aes256 -out ca-key.pem 4096
 
 #create a variable for you subject
-SUBJECT='/CN=zwindler/C=FR/ST=NAQ/L=Pessac/O=zwindler'
+SUBJECT='/CN=ca/C=FR/ST=NAQ/L=Pessac/O=zwindler'
 
-openssl req -x509 -new -nodes -key ca.key -sha256 -days 1826 -out ca.crt -subj ${SUBJECT}
+openssl req -x509 -new -nodes -key ca-key.pem -sha256 -days 1826 -out ca.pem -subj ${SUBJECT}
 ```
 
 Check your IP address and store it
@@ -93,7 +93,8 @@ LOCALIP=192.168.1.41
 Generate the etcd certificates
 
 ```
-for CERT in etcd apiserver scheduler controller-manager service-account kubelet admin kube-proxy; do
+for CERT in etcd apiserver scheduler controller-manager service-account kubelet kube-proxy; do
+  SUBJECT='/CN=${CERT}/C=FR/ST=NAQ/L=Pessac/O=zwindler'
   openssl req -new -nodes -out ${CERT}.csr -newkey rsa:4096 -keyout ${CERT}.key -subj ${SUBJECT}
   # create a v3 ext file for SAN properties
   cat > ${CERT}.v3.ext << EOF
@@ -106,8 +107,29 @@ IP.1 = 127.0.0.1
 IP.2 = ${LOCALIP}
 EOF
 
-  openssl x509 -req -in ${CERT}.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out ${CERT}.crt -days 730 -sha256 -extfile ${CERT}.v3.ext
+  openssl x509 -req -in ${CERT}.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out ${CERT}.crt -days 730 -sha256 -extfile ${CERT}.v3.ext
 done
+```
+
+Generate the all mighty admin which must have O=system:masters
+
+```
+CERT=admin
+SUBJECT='/CN=admin/C=FR/ST=NAQ/L=Pessac/O=system:masters'
+openssl req -new -nodes -out ${CERT}.csr -newkey rsa:4096 -keyout ${CERT}.key -subj ${SUBJECT}
+# create a v3 ext file for SAN properties
+  cat > ${CERT}.v3.ext << EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage=clientAuth
+subjectAltName = @alt_names
+[alt_names]
+IP.1 = 127.0.0.1
+IP.2 = ${LOCALIP}
+EOF
+
+openssl x509 -req -in ${CERT}.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out ${CERT}.crt -days 730 -sha256 -extfile ${CERT}.v3.ext
 ```
 
 Get back in main dir
@@ -145,13 +167,14 @@ export PATH=$PATH:${pwd}
 
 mkdir /etc/kubernetes
 kubectl config set-cluster demystifions-kubernetes \
-  --certificate-authority=certs/ca.crt \
+  --certificate-authority=certs/ca.pem \
   --embed-certs=true \
   --server=https://127.0.0.1:6443
 
 kubectl config set-credentials admin \
-  --client-certificate=certs/admin.crt \
-  --client-key=certs/admin.key
+  --embed-certs=true \
+  --client-certificate=certs/admin.pem \
+  --client-key=certs/admin-key.pem
 
 kubectl config set-context demystifions-kubernetes \
   --cluster=demystifions-kubernetes \
@@ -168,7 +191,7 @@ We can't start the API server until we have an etcd backend to support it's pers
 #create a new tmux session for etcd
 '[ctrl]-b' and then ': new -s etcd'
 
-./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.crt --cert-file=certs/etcd.crt --key-file=certs/etcd.key --advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
+./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.pem --cert-file=certs/kubernetes.pem --key-file=certs/kubernetes-key.pem --advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
   
 [...]
 {"level":"info","ts":"2022-11-24T20:30:46.132+0100","caller":"embed/serve.go:100","msg":"ready to serve client requests"}
@@ -179,13 +202,15 @@ We can't start the API server until we have an etcd backend to support it's pers
 
 ### kube-apiserver
 
+Now we can start the apiserver
+
 ```
 #create a new tmux session for apiserver
 '[ctrl]-b' and then ': new -s apiserver'
-./kube-apiserver --authorization-mode=Node,RBAC --etcd-servers=https://127.0.0.1:2379 \
-  --etcd-cafile=certs/ca.crt --etcd-certfile=certs/etcd.crt --etcd-keyfile=certs/etcd.key \
-  --service-account-key-file=certs/service-account.crt --service-account-signing-key-file=certs/service-account.key --service-account-issuer=https://kubernetes.default.svc.cluster.local \
-  --tls-cert-file=certs/apiserver.crt --tls-private-key-file=certs/apiserver.key
+./kube-apiserver --authorization-mode=Node,RBAC \
+  --etcd-servers=https://127.0.0.1:2379 --etcd-cafile=certs/ca.pem --etcd-certfile=certs/kubernetes.pem --etcd-keyfile=certs/kubernetes-key.pem \
+  --service-account-key-file=certs/service-account.pem --service-account-signing-key-file=certs/service-account-key.pem --service-account-issuer=https://kubernetes.default.svc.cluster.local \
+  --tls-cert-file=certs/kubernetes.pem --tls-private-key-file=certs/kubernetes-key.pem
 ```
 
 Note: you can then switch between sessions with '[ctrl]-b' and then '(' or ')'
@@ -205,3 +230,23 @@ Client Version: v1.25.4
 Kustomize Version: v4.5.7
 Server Version: v1.25.4
 ```
+
+We can try to deploy a Deployment and see that the Deployment is created but not the Pods.
+
+```
+kubectl get deployment
+TODO
+
+kubectl get pods
+TODO
+```
+
+This is because most of Kubernetes magic is done by the kubernetes Controller manager (and the controllers it controls. Typically here, creating a Deployment will trigger the creation of a Replicaset, which in turn will create Pods.
+
+### kube-controller-manager
+
+We can then start the controller manager
+
+### kube-scheduler
+
+We can then start the scheduler
