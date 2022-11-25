@@ -235,15 +235,52 @@ cat > kubernetes-csr.json <<EOF
 }
 EOF
 
+KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
+
+
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${LOCALIP},127.0.0.1 \
+  -hostname=${LOCALIP},127.0.0.1,${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
   kubernetes-csr.json | cfssljson -bare kubernetes
 
 }
+
+{
+
+cat > service-account-csr.json <<EOF
+{
+  "CN": "service-accounts",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  service-account-csr.json | cfssljson -bare service-account
+
+}
+
+TODO factorize
+
+TODO missing kubelet and kube-proxy certs
 ```
 
 Get back in main dir
@@ -266,10 +303,9 @@ We will create the admin kube config file in /etc/kubernetes/admin.conf
 #launch tmux as root
 tmux new -t terminal
 
-export KUBECONFIG=/etc/kubernetes/admin.conf
+export KUBECONFIG=admin.conf
 export PATH=$PATH:${pwd}
 
-mkdir /etc/kubernetes
 kubectl config set-cluster demystifions-kubernetes \
   --certificate-authority=certs/ca.pem \
   --embed-certs=true \
@@ -298,10 +334,7 @@ We can't start the API server until we have an etcd backend to support it's pers
 ./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.pem --cert-file=certs/kubernetes.pem --key-file=certs/kubernetes-key.pem --advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
   
 [...]
-{"level":"info","ts":"2022-11-24T20:30:46.132+0100","caller":"embed/serve.go:100","msg":"ready to serve client requests"}
-{"level":"info","ts":"2022-11-24T20:30:46.133+0100","caller":"etcdmain/main.go:44","msg":"notifying init daemon"}
-{"level":"info","ts":"2022-11-24T20:30:46.133+0100","caller":"etcdmain/main.go:50","msg":"successfully notified init daemon"}
-{"level":"info","ts":"2022-11-24T20:30:46.135+0100","caller":"embed/serve.go:146","msg":"serving client traffic insecurely; this is strongly discouraged!","address":"127.0.0.1:2379"}
+TODO
 ```
 
 ### kube-apiserver
