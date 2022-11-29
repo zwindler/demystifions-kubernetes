@@ -76,17 +76,14 @@ Optionnaly as well, `curl` is a nice addition to play with API server.
 
 ### Certificates
 
-Even though this tutorial could be run without having any TLS encryption between components (like Jérôme did), for fun (and profit) I'd rather use encryption everywhere.
+Even though this tutorial could be run without having any TLS encryption between components (like Jérôme did), for fun (and profit) I'd rather use encryption everywhere. See [github.com/kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way/blob/master/docs/04-certificate-authority.md)
 
-Create a dir for all certs and then generate a CA
+Generate the CA
 
 ```
 mkdir certs && cd certs
 
-TODO see https://github.com/kelseyhightower/kubernetes-the-hard-way/blob/master/docs/04-certificate-authority.md
-
 {
-
 cat > ca-config.json <<EOF
 {
   "signing": {
@@ -102,7 +99,6 @@ cat > ca-config.json <<EOF
   }
 }
 EOF
-
 cat > ca-csr.json <<EOF
 {
   "CN": "Kubernetes",
@@ -112,22 +108,23 @@ cat > ca-csr.json <<EOF
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
+      "C": "FR",
+      "L": "Pessac",
       "O": "Kubernetes",
       "OU": "CA",
-      "ST": "Oregon"
+      "ST": "Nouvelle Aquitaine"
     }
   ]
 }
 EOF
-
 cfssl gencert -initca ca-csr.json | cfssljson -bare ca
-
 }
+```
 
+Generate admin certs
+
+```
 {
-
 cat > admin-csr.json <<EOF
 {
   "CN": "admin",
@@ -137,150 +134,112 @@ cat > admin-csr.json <<EOF
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
+      "C": "FR",
+      "L": "Pessac",
       "O": "system:masters",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "OU": "Démystifions Kubernetes",
+      "ST": "Nouvelle Aquitaine"
     }
   ]
 }
 EOF
-
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -profile=kubernetes \
   admin-csr.json | cfssljson -bare admin
-
 }
+```
 
-{
+Generate all other certs
 
-cat > kube-controller-manager-csr.json <<EOF
-{
-  "CN": "system:kube-controller-manager",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:kube-controller-manager",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
-  kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
-
-}
-
-{
-
-cat > kube-scheduler-csr.json <<EOF
-{
-  "CN": "system:kube-scheduler",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:kube-scheduler",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
-  kube-scheduler-csr.json | cfssljson -bare kube-scheduler
-
-}
-
-cat > kubernetes-csr.json <<EOF
-{
-  "CN": "kubernetes",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "Kubernetes",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
+```
+#replace with you local ip address
+LOCALIP=YOUR.LOCAL.IP.ADDRESS
 KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
-
-
+for CERT in kubernetes kube-controller-manager kube-scheduler service-account; do
+cat > ${CERT}-csr.json <<EOF
+{
+  "CN": "system:${CERT}",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "FR",
+      "L": "Pessac",
+      "O": "system:${CERT}",
+      "OU": "Démystifions Kubernetes",
+      "ST": "Nouvelle Aquitaine"
+    }
+  ]
+}
+EOF
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -hostname=${LOCALIP},127.0.0.1,${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
-  kubernetes-csr.json | cfssljson -bare kubernetes
+  ${CERT}-csr.json | cfssljson -bare ${CERT}
+done
 
-}
-
+cat > kubelet-csr.json <<EOF
 {
-
-cat > service-account-csr.json <<EOF
-{
-  "CN": "service-accounts",
+  "CN": "system:node:kubelet",
   "key": {
     "algo": "rsa",
     "size": 2048
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
-      "O": "Kubernetes",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "C": "FR",
+      "L": "Pessac",
+      "O": "system:nodes",
+      "OU": "Démystifions Kubernetes",
+      "ST": "Nouvelle Aquitaine"
     }
   ]
 }
 EOF
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -hostname=${LOCALIP},127.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -profile=kubernetes \
+  kubelet-csr.json | cfssljson -bare kubelet
+done
+}
 
+{
+cat > kube-proxy-csr.json <<EOF
+{
+  "CN": "system:kube-proxy",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "FR",
+      "L": "Pessac",
+      "O": "system:node-proxier",
+      "OU": "Démystifions Kubernetes",
+      "ST": "Nouvelle Aquitaine"
+    }
+  ]
+}
+EOF
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -profile=kubernetes \
-  service-account-csr.json | cfssljson -bare service-account
-
+  kube-proxy-csr.json | cfssljson -bare kube-proxy
 }
-
-TODO factorize
-
-TODO missing kubelet and kube-proxy certs
 ```
 
 Get back in main dir
@@ -301,7 +260,7 @@ We will create the admin kube config file in /etc/kubernetes/admin.conf
 
 ```
 #launch tmux as root
-tmux new -t terminal
+tmux new -t bash
 
 export KUBECONFIG=admin.conf
 export PATH=$PATH:${pwd}
@@ -334,7 +293,7 @@ We can't start the API server until we have an etcd backend to support it's pers
 ./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.pem --cert-file=certs/kubernetes.pem --key-file=certs/kubernetes-key.pem --advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
   
 [...]
-TODO
+{"level":"info","ts":"2022-11-29T17:34:54.601+0100","caller":"embed/serve.go:198","msg":"serving client traffic securely","address":"127.0.0.1:2379"}
 ```
 
 ### kube-apiserver
@@ -366,6 +325,22 @@ You should get a similar output
 Client Version: v1.25.4
 Kustomize Version: v4.5.7
 Server Version: v1.25.4
+```
+
+Check what APIs are available
+
+```
+kubectl api-resources | head
+NAME                              SHORTNAMES   APIVERSION                             NAMESPACED   KIND
+bindings                                       v1                                     true         Binding
+componentstatuses                 cs           v1                                     false        ComponentStatus
+configmaps                        cm           v1                                     true         ConfigMap
+endpoints                         ep           v1                                     true         Endpoints
+events                            ev           v1                                     true         Event
+limitranges                       limits       v1                                     true         LimitRange
+namespaces                        ns           v1                                     false        Namespace
+nodes                             no           v1                                     false        Node
+persistentvolumeclaims            pvc          v1                                     true         PersistentVolumeClaim
 ```
 
 We can try to deploy a Deployment and see that the Deployment is created but not the Pods.
