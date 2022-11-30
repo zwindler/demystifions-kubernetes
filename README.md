@@ -282,11 +282,34 @@ kubectl config set-context demystifions-kubernetes \
 kubectl config use-context demystifions-kubernetes
 ```
 
+Also create one for kube-controller-manager
+
+```
+{
+export KUBECONFIG=kube-controller-manager.conf
+kubectl config set-cluster kube-controller-manager \
+  --certificate-authority=certs/ca.pem \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443
+
+kubectl config set-credentials kube-controller-manager \
+  --embed-certs=true \
+  --client-certificate=certs/kube-controller-manager.pem \
+  --client-key=certs/kube-controller-manager-key.pem
+
+kubectl config set-context kube-controller-manager \
+  --cluster=kube-controller-manager \
+  --user=kube-controller-manager
+
+kubectl config use-context kube-controller-manager
+}
+```
+
 ### etcd
 
 We can't start the API server until we have an etcd backend to support it's persistance. So let's start with `etcd` command
 
-```
+```bash
 #create a new tmux session for etcd
 '[ctrl]-b' and then ': new -s etcd'
 
@@ -300,9 +323,10 @@ We can't start the API server until we have an etcd backend to support it's pers
 
 Now we can start the apiserver
 
-```
+```bash
 #create a new tmux session for apiserver
 '[ctrl]-b' and then ': new -s apiserver'
+
 ./kube-apiserver --authorization-mode=Node,RBAC --client-ca-file=certs/ca.pem\
   --etcd-servers=https://127.0.0.1:2379 --etcd-cafile=certs/ca.pem --etcd-certfile=certs/kubernetes.pem --etcd-keyfile=certs/kubernetes-key.pem \
   --service-account-key-file=certs/service-account.pem --service-account-signing-key-file=certs/service-account-key.pem --service-account-issuer=https://kubernetes.default.svc.cluster.local \
@@ -314,7 +338,7 @@ Note: you can then switch between sessions with '[ctrl]-b' and then '(' or ')'
 Get back to "terminal" tmux session and check that API server responds
 
 ```bash
-'[ctrl-b]-b' and then ': attach -t terminal'
+'[ctrl]-b' and then ': attach -t terminal'
 
 kubectl version --short
 ```
@@ -357,12 +381,41 @@ kubectl get pods
 No resources found in default namespace.
 ```
 
-This is because most of Kubernetes magic is done by the kubernetes **Controller manager** (and the controllers it controls). Typically here, creating a Deployment will trigger the creation of a Replicaset, which in turn will create our Pods.
-
 ### kube-controller-manager
 
-We can then start the controller manager
+This is because most of Kubernetes magic is done by the kubernetes **Controller manager** (and the controllers it controls). Typically here, creating a Deployment will trigger the creation of a Replicaset, which in turn will create our Pods.
+
+We can start the controller manager to fix this.
+
+```bash
+#create a new tmux session for the controller manager
+'[ctrl]-b' and then ': new -s controller'
+
+./kube-controller-manager --kubeconfig kube-controller-manager.conf \
+--cluster-signing-cert-file=certs/ca.pem --cluster-signing-key-file=certs/ca-key.pem \
+--service-account-private-key-file=certs/service-account-key.pem --use-service-account-credentials \
+--root-ca-file=certs/ca.pem
+[...]
+I1130 14:36:38.454244    1772 garbagecollector.go:163] Garbage collector: all resource monitors have synced. Proceeding to collect garbage
+```
+
+The ReplicaSet and then the Pod are created... but the Pod is stuck in `Pending` indefinately!
+
+There are 3 things missing before the Pod can start:
+- we need a node to start the pod
+- we need a CNI plugin to give an IP to the Pod
+- we need a scheduler to tell the Pod where to start (on the node)
+
+### kubelet
+
+Let's start the kubelet component. It will register our current machine as a node, which will allow future Pod scheduling later.
+
+### CNI plugin
+
+### kube-proxy
 
 ### kube-scheduler
 
-We can then start the scheduler
+## The end
+
+Now, you should have a working "one node kubernetes cluster"
