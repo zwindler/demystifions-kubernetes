@@ -2,9 +2,11 @@
 
 ## Prerequisites
 
-With his blessing, I was strongly inspired by Jérôme Petazzoni's excellent repo [dessine-moi-un-cluster](https://github.com/jpetazzo/dessine-moi-un-cluster) for this part and updated. Thanks Jérôme :).
+With his blessing, I was strongly inspired by Jérôme Petazzoni's excellent repo [dessine-moi-un-cluster](https://github.com/jpetazzo/dessine-moi-un-cluster) for this part and updated. Thanks a lot, Jérôme :).
 
 I also adapted parts of [Kelsey Hightower's kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (the TLS certs).
+
+I'm going to launch this on a clean VM running Ubuntu 22.04.
 
 ### api-server & friends
 
@@ -21,7 +23,7 @@ rm kubernetes-server-linux-amd64.tar.gz
 rm -rf kubernetes
 ```
 
-Note: jpetazzo's repo mention a all-in-one binary call `hyperkube` which doesn't seem to exist anymore
+Note: jpetazzo's repo mentions a all-in-one binary call `hyperkube` which doesn't seem to exist anymore.
 
 ### etcd
 
@@ -69,22 +71,19 @@ rm containerd-1.6.10-linux-amd64.tar.gz
 
 ### runc
 
-To work, `containerd` is a high level container runtime which relies on `runc` (low level)
-
-Download it 
+`containerd` is a high level container runtime which relies on `runc` (low level. Download it:
 
 ```bash
 curl https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 -L -o runc
 chmod +x runc
 mv runc /usr/bin/
-
 ```
 
 ### Misc
 
 We need `cfssl` tool to generate certificates. Install it (see [github.com/cloudflare/cfssl](https://github.com/cloudflare/cfssl#installation)).
 
-To install cilium (CNI plugin), the easiest way is to use `helm` (see [helm.sh/docs](https://helm.sh/docs/intro/install/)).
+To install calico (the CNI plugin in this tutorial), the easiest way is to use `helm` (see [helm.sh/docs](https://helm.sh/docs/intro/install/)).
 
 Optionally, to ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends. Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) should you need it ;-).
 
@@ -207,9 +206,13 @@ cfssl gencert \
   -profile=kubernetes \
   ${CERT}-csr.json | cfssljson -bare ${CERT}
 done
+```
 
+DON'T FORGET TO CHANGE INSTANCE VARIABLE
+
+```bash
 {
-INSTANCE=instance-2022-12-01-15-47-29
+INSTANCE=NameOfYourVM
 cat > kubelet-csr.json <<EOF
 {
   "CN": "system:node:${INSTANCE}",
@@ -279,13 +282,11 @@ Last but not least, a lot of files will be created in various places. For conven
 
 ### Authentication Configs
 
-We will create the admin kube config file in `/etc/kubernetes/admin.conf`
+We will create a bunch of kubeconfig files using the certs we generated. We'll use them later:
 
 ```bash
-#launch tmux as root
+#launch tmux
 tmux new -t bash
-
-export KUBECONFIG=admin.conf
 export PATH=$PATH:${pwd}
 
 for COMPONENT in admin kube-controller-manager kube-scheduler kubelet kube-proxy; do
@@ -310,13 +311,15 @@ done
 
 ### etcd
 
-We can't start the API server until we have an `etcd` backend to support it's persistance. So let's start with `etcd` command
+We can't start the API server until we have an `etcd` backend to support it's persistance. So let's start with `etcd` command:
 
 ```bash
 #create a new tmux session for etcd
 '[ctrl]-b' and then ': new -s etcd'
 
-./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.pem --cert-file=certs/kubernetes.pem --key-file=certs/kubernetes-key.pem --advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
+./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.pem \
+--cert-file=certs/kubernetes.pem --key-file=certs/kubernetes-key.pem \
+--advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
   
 [...]
 {"level":"info","ts":"2022-11-29T17:34:54.601+0100","caller":"embed/serve.go:198","msg":"serving client traffic securely","address":"127.0.0.1:2379"}
@@ -324,16 +327,19 @@ We can't start the API server until we have an `etcd` backend to support it's pe
 
 ### kube-apiserver
 
-Now we can start the `kube-apiserver`
+Now we can start the `kube-apiserver`:
 
 ```bash
 #create a new tmux session for apiserver
 '[ctrl]-b' and then ': new -s apiserver'
 
-./kube-apiserver --allow-privileged --authorization-mode=Node,RBAC --client-ca-file=certs/ca.pem\
-  --etcd-servers=https://127.0.0.1:2379 --etcd-cafile=certs/ca.pem --etcd-certfile=certs/kubernetes.pem --etcd-keyfile=certs/kubernetes-key.pem \
-  --service-account-key-file=certs/service-account.pem --service-account-signing-key-file=certs/service-account-key.pem --service-account-issuer=https://kubernetes.default.svc.cluster.local \
-  --tls-cert-file=certs/kubernetes.pem --tls-private-key-file=certs/kubernetes-key.pem
+./kube-apiserver --allow-privileged --authorization-mode=Node,RBAC \
+--client-ca-file=certs/ca.pem --etcd-servers=https://127.0.0.1:2379 \
+--etcd-cafile=certs/ca.pem --etcd-certfile=certs/kubernetes.pem --etcd-keyfile=certs/kubernetes-key.pem \
+--service-account-key-file=certs/service-account.pem \
+--service-account-signing-key-file=certs/service-account-key.pem \
+--service-account-issuer=https://kubernetes.default.svc.cluster.local \
+--tls-cert-file=certs/kubernetes.pem --tls-private-key-file=certs/kubernetes-key.pem
 ```
 
 Note: you can then switch between sessions with '[ctrl]-b' and then '(' or ')'
@@ -370,7 +376,7 @@ nodes                             no           v1                               
 persistentvolumeclaims            pvc          v1                                     true         PersistentVolumeClaim
 ```
 
-We can try to deploy a *Deployment* and see that the *Deployment* is created but not the Pods.
+We can try to deploy a *Deployment* and see that the *Deployment* is created but not the *Pods*.
 
 ```
 kubectl create deployment web --image=nginx
@@ -402,19 +408,15 @@ We can start the controller manager to fix this.
 I1130 14:36:38.454244    1772 garbagecollector.go:163] Garbage collector: all resource monitors have synced. Proceeding to collect garbage
 ```
 
-The *ReplicaSet* and then the *Pod* are created... but the Pod is stuck in `Pending` indefinitely!
+The *ReplicaSet* and then the *Pod* are created... but the *Pod* is stuck in `Pending` indefinitely!
 
 That's because there are many things missing before the Pod can start. 
 
-To start it, we still need:
-- a scheduler to decide where to start the **Pod** (here we will have only one **Node** so this should be easy)
-- a container runtime to run the containers in the pods
-- a CNI plugin to give an IP to the Pod
-- a kubelet to let kubernetes know *where* it can run the Pod (on a **Node**)
+To start it, we still need a scheduler to decide where to start the **Pod**
 
 ### kube-scheduler
 
-Let's now start the `kube-scheduler`
+Let's now start the `kube-scheduler`:
 
 ```bash
 #create a new tmux session for scheduler
@@ -428,9 +430,14 @@ I1201 12:54:40.914977    2450 leaderelection.go:248] attempting to acquire leade
 I1201 12:54:40.923268    2450 leaderelection.go:258] successfully acquired lease kube-system/kube-scheduler
 ```
 
+But we still don't have our *Pod*... Sad panda.
+
+In fact, that's because we still need a bunch of things...
+- a container runtime to run the containers in the pods
+- a `kubelet` daemon to let kubernetes interact with the container runtime
 ### container runtime
 
-Let's start the container runtime `containerd` on our machine
+Let's start the container runtime `containerd` on our machine:
 
 ```bash
 #create a new tmux session for containerd
@@ -444,17 +451,23 @@ INFO[2022-12-01T11:03:37.617062671Z] containerd successfully booted in 0.038455s
 
 ### kubelet
 
-Let's start the `kubelet` component. It will register our current machine as a node, which will allow future *Pod* scheduling later. It will also talk with containerd to launch/monitor/kill the containers of our *Pods*.
+Let's start the `kubelet` component. It will register our current machine as a *Node*, which will allow future *Pod* scheduled by scheduler.
+
+At last!
+
+The role of the kubelet is also to talk with containerd to launch/monitor/kill the containers of our *Pods*.
 
 ```bash
 #create a new tmux session for kubelet
 '[ctrl]-b' and then ': new -s kubelet'
-sudo ./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true --container-runtime=remote --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
+sudo ./kubelet --fail-swap-on=false --kubeconfig kubelet.conf \
+--register-node=true --container-runtime=remote \
+--container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
 ```
 
 ### kube-proxy
 
-Let's now start the `kube-proxy`
+Do deal with networking inside Kubernetes, we also need a few last things. A `kube-proxy` (which in some cases can be removed) and a CNI plugin. Let's start the `kube-proxy`:
 
 ```bash
 #create a new tmux session for proxy
@@ -476,7 +489,7 @@ web          ClusterIP   10.0.0.34    <none>        80/TCP    67s
 
 ### CNI plugin
 
-Deploy Calico
+I chose Calico as CNI plugin but there are many more options out there. Here I just deploy the chart and let Calico do the magic.
 
 ```bash
 export KUBECONFIG=admin.conf
@@ -489,7 +502,7 @@ helm install calico projectcalico/tigera-operator --version v3.24.5 --namespace 
 
 ### IngressController
 
-Let's deploy Traefik as our ingressController
+Finally, to allow us to connect to our Pod using a nice URL in our brower, I'll add an optional *IngressController*. Let's deploy Traefik as our ingressController
 
 ```bash
 helm repo add traefik https://traefik.github.io/charts
@@ -506,7 +519,10 @@ traefik      LoadBalancer   10.0.0.86    <pending>     80:31889/TCP,443:31297/TC
 web          ClusterIP      10.0.0.34    <none>        80/TCP                       21m
 ```
 
-We can now access Traefik from the Internet by using http://dk.zwindler.fr:31889 (and https://dk.zwindler.fr:31297)
+Notice the Ports on the traefik line: **
+**.
+
+Provided that DNS can resolve domain.tld to the IP of our Node, we can now access Traefik from the Internet by using http://domain.tld:31889 (and https://domain.tld:31297)
 
 But how can we connect to our website?
 
@@ -521,7 +537,7 @@ metadata:
   namespace: default
 spec:
   rules:
-    - host: dk.zwindler.fr
+    - host: domain.tld
       http:
         paths:
           - path: /
@@ -535,7 +551,7 @@ EOF
 kubectl apply -f ingress.yaml
 ```
 
-[http://dk.zwindler.fr:31889/](http://dk.zwindler.fr:31889/) should now be available!! Congrats!
+[http://domain.tld:31889/](http://domain.tld:31889/) should now be available!! Congrats!
 
 ## Playing with our cluster
 
