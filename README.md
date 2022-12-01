@@ -203,7 +203,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${LOCALIP},127.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -hostname=${LOCALIP},127.0.0.1,10.0.0.1,${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
   ${CERT}-csr.json | cfssljson -bare ${CERT}
 done
@@ -232,7 +232,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${LOCALIP},127.0.0.1,${INSTANCE} \
+  -hostname=${LOCALIP},127.0.0.1,10.0.0.1,${INSTANCE} \
   -profile=kubernetes \
   kubelet-csr.json | cfssljson -bare kubelet
 }
@@ -442,6 +442,16 @@ INFO[2022-12-01T11:03:37.617062671Z] containerd successfully booted in 0.038455s
 [...]
 ```
 
+### kubelet
+
+Let's start the `kubelet` component. It will register our current machine as a node, which will allow future *Pod* scheduling later. It will also talk with containerd to launch/monitor/kill the containers of our *Pods*.
+
+```bash
+#create a new tmux session for kubelet
+'[ctrl]-b' and then ': new -s kubelet'
+./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true --container-runtime=remote --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
+```
+
 ### kube-proxy
 
 Let's now start the `kube-proxy`
@@ -454,22 +464,13 @@ Let's now start the `kube-proxy`
 
 ### CNI plugin
 
-I like what they do at Isovalent so I'll pop this cluster with Cilium as CNI plugin. Feel free to explore and install something else if you want, there is a lot of options [there](https://github.com/containernetworking/cni#who-is-using-cni).
+Deploy Calico
 
 ```bash
-helm install --kubeconfig admin.conf cilium cilium/cilium \
---version 1.12.4 --namespace kube-system \
---set k8sServiceHost=127.0.0.1 --set k8sServicePort=6443
-```
+helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
 
-### kubelet
-
-Let's start the `kubelet` component. It will register our current machine as a node, which will allow future *Pod* scheduling later. It will also talk with containerd to launch/monitor/kill the containers of our *Pods*.
-
-```bash
-#create a new tmux session for kubelet
-'[ctrl]-b' and then ': new -s kubelet'
-./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true --container-runtime=remote --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
+kubectl create namespace tigera-operator
+helm install calico projectcalico/tigera-operator --version v3.24.5 --namespace tigera-operator
 ```
 
 ## The end
