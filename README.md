@@ -2,13 +2,15 @@
 
 ## Prerequisites
 
-With his blessing, I copy-pasted Jérôme Petazzoni's excellent repo [dessine-moi-un-cluster](https://github.com/jpetazzo/dessine-moi-un-cluster) for this part and updated. Thanks Jérôme :).
+With his blessing, I was strongly inspired by Jérôme Petazzoni's excellent repo [dessine-moi-un-cluster](https://github.com/jpetazzo/dessine-moi-un-cluster) for this part and updated. Thanks Jérôme :).
+
+I also adapted parts of [Kelsey Hightower's kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (the TLS certs).
 
 ### api-server & friends
 
 Get kubernetes binaries from the kubernetes release page. We want the "server" bundle for amd64 Linux.
 
-```
+```bash
 curl -L https://dl.k8s.io/v1.25.4/kubernetes-server-linux-amd64.tar.gz -o kubernetes-server-linux-amd64.tar.gz
 tar -zxf kubernetes-server-linux-amd64.tar.gz
 for BINARY in kubectl kube-apiserver kube-scheduler kube-controller-manager kubelet kube-proxy;
@@ -29,14 +31,14 @@ Get binaries from the etcd release page. Pick the tarball for Linux amd64. In th
 
 This is a fancy one-liner to download the tarball and extract just what we need:
 
-```
+```bash
 curl -L https://github.com/etcd-io/etcd/releases/download/v3.5.6/etcd-v3.5.6-linux-amd64.tar.gz | 
   tar --strip-components=1 --wildcards -zx '*/etcd' '*/etcdctl'
 ```
 
 Test it
 
-```
+```bash
 $ etcd --version
 etcd Version: 3.5.6
 Git SHA: cecbe35ce
@@ -50,7 +52,7 @@ API version: 3.5
 
 Create a directory to host etcd database files
 
-```
+```bash
 mkdir etcd-data
 chmod 700 etcd-data
 ```
@@ -59,10 +61,23 @@ chmod 700 etcd-data
 
 Note: Jérôme was using Docker but since Kubernetes 1.24, dockershim, the component responsible for bridging the gap between docker daemon and kubernetes is no longer supported. I (like many other) switched to `containerd` but there are alternatives.
 
-```
+```bash
 wget https://github.com/containerd/containerd/releases/download/v1.6.10/containerd-1.6.10-linux-amd64.tar.gz
-tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' -f containerd-1.6.10-linux-amd64.tar.gz
+tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' '*/containerd-shim-runc-v2' -f containerd-1.6.10-linux-amd64.tar.gz
 rm containerd-1.6.10-linux-amd64.tar.gz
+```
+
+### runc
+
+To work, `containerd` is a high level container runtime which relies on `runc` (low level)
+
+Download it 
+
+```bash
+curl https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 -L -o runc
+chmod +x runc
+mv runc /usr/bin/
+
 ```
 
 ### Misc
