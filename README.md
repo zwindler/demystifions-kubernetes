@@ -96,7 +96,7 @@ Even though this tutorial could be run without having any TLS encryption between
 
 Generate the CA
 
-```
+```bash
 mkdir certs && cd certs
 
 {
@@ -139,7 +139,7 @@ cfssl gencert -initca ca-csr.json | cfssljson -bare ca
 
 Generate admin certs
 
-```
+```bash
 {
 cat > admin-csr.json <<EOF
 {
@@ -267,7 +267,7 @@ cfssl gencert \
 
 Get back in main dir
 
-```
+```bash
 cd ..
 ```
 
@@ -288,92 +288,24 @@ tmux new -t bash
 export KUBECONFIG=admin.conf
 export PATH=$PATH:${pwd}
 
+for COMPONENT in admin kube-controller-manager kube-scheduler kubelet kube-proxy; do
+export KUBECONFIG=${COMPONENT}.conf
 kubectl config set-cluster demystifions-kubernetes \
   --certificate-authority=certs/ca.pem \
   --embed-certs=true \
   --server=https://127.0.0.1:6443
 
-kubectl config set-credentials admin \
+kubectl config set-credentials ${COMPONENT} \
   --embed-certs=true \
-  --client-certificate=certs/admin.pem \
-  --client-key=certs/admin-key.pem
+  --client-certificate=certs/${COMPONENT}.pem \
+  --client-key=certs/${COMPONENT}-key.pem
 
-kubectl config set-context demystifions-kubernetes \
+kubectl config set-context ${COMPONENT} \
   --cluster=demystifions-kubernetes \
-  --user=admin
+  --user=${COMPONENT}
 
-kubectl config use-context demystifions-kubernetes
-```
-
-TODO factorize
-
-Create one for `kube-controller-manager`
-
-```bash
-{
-export KUBECONFIG=kube-controller-manager.conf
-kubectl config set-cluster demystifions-kubernetes \
-  --certificate-authority=certs/ca.pem \
-  --embed-certs=true \
-  --server=https://127.0.0.1:6443
-
-kubectl config set-credentials kube-controller-manager \
-  --embed-certs=true \
-  --client-certificate=certs/kube-controller-manager.pem \
-  --client-key=certs/kube-controller-manager-key.pem
-
-kubectl config set-context kube-controller-manager \
-  --cluster=demystifions-kubernetes \
-  --user=kube-controller-manager
-
-kubectl config use-context kube-controller-manager
-}
-```
-
-One for `kubelet`
-
-```bash
-{
-export KUBECONFIG=kubelet.conf
-kubectl config set-cluster demystifions-kubernetes \
-  --certificate-authority=certs/ca.pem \
-  --embed-certs=true \
-  --server=https://127.0.0.1:6443
-
-kubectl config set-credentials system:node:kubelet \
-  --client-certificate=certs/kubelet.pem \
-  --client-key=certs/kubelet-key.pem \
-  --embed-certs=true
-
-kubectl config set-context kubelet \
-  --cluster=demystifions-kubernetes \
-  --user=system:node:kubelet
-
-kubectl config use-context kubelet
-}
-```
-
-One for `kube-scheduler`
-
-```bash
-{
-export KUBECONFIG=kube-scheduler.conf
-kubectl config set-cluster demystifions-kubernetes \
-  --certificate-authority=certs/ca.pem \
-  --embed-certs=true \
-  --server=https://127.0.0.1:6443
-
-kubectl config set-credentials kube-scheduler \
-  --embed-certs=true \
-  --client-certificate=certs/kube-scheduler.pem \
-  --client-key=certs/kube-scheduler-key.pem
-
-kubectl config set-context kube-scheduler \
-  --cluster=demystifions-kubernetes \
-  --user=kube-scheduler
-
-kubectl config use-context kube-scheduler
-}
+kubectl config use-context ${COMPONENT}
+done
 ```
 
 ### etcd
@@ -512,6 +444,13 @@ INFO[2022-12-01T11:03:37.617062671Z] containerd successfully booted in 0.038455s
 
 ### kube-proxy
 
+Let's now start the `kube-proxy`
+
+```bash
+#create a new tmux session for proxy
+'[ctrl]-b' and then ': new -s proxy'
+./kube-proxy --kubeconfig kube-proxy.conf
+```
 
 ### CNI plugin
 
@@ -536,3 +475,7 @@ Let's start the `kubelet` component. It will register our current machine as a n
 ## The end
 
 Now, you should have a working "one node kubernetes cluster"
+
+### Cleanup
+
+You should clear the `/var/lib/kubelet` directory and remove the `/usr/bin/runc` binary
