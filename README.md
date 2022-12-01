@@ -475,25 +475,10 @@ The *ReplicaSet* and then the *Pod* are created... but the Pod is stuck in `Pend
 That's because there are many things missing before the Pod can start. 
 
 To start it, we still need:
-- a container runtime to run the containers in the pods
 - a scheduler to decide where to start the **Pod** (here we will have only one **Node** so this should be easy)
+- a container runtime to run the containers in the pods
 - a CNI plugin to give an IP to the Pod
 - a kubelet to let kubernetes know *where* it can run the Pod (on a **Node**)
-
-
-### container runtime
-
-Let's start the container runtime `containerd` on our machine
-
-```bash
-#create a new tmux session for containerd
-'[ctrl]-b' and then ': new -s containerd'
-./containerd
-[...]
-INFO[2022-12-01T11:03:37.616892592Z] serving...                                    address=/run/containerd/containerd.sock
-INFO[2022-12-01T11:03:37.617062671Z] containerd successfully booted in 0.038455s  
-[...]
-```
 
 ### kube-scheduler
 
@@ -511,12 +496,31 @@ I1201 12:54:40.914977    2450 leaderelection.go:248] attempting to acquire leade
 I1201 12:54:40.923268    2450 leaderelection.go:258] successfully acquired lease kube-system/kube-scheduler
 ```
 
+### container runtime
+
+Let's start the container runtime `containerd` on our machine
+
+```bash
+#create a new tmux session for containerd
+'[ctrl]-b' and then ': new -s containerd'
+./containerd
+[...]
+INFO[2022-12-01T11:03:37.616892592Z] serving...                                    address=/run/containerd/containerd.sock
+INFO[2022-12-01T11:03:37.617062671Z] containerd successfully booted in 0.038455s  
+[...]
+```
+
+### kube-proxy
+
+
 ### CNI plugin
 
 I like what they do at Isovalent so I'll pop this cluster with Cilium as CNI plugin. Feel free to explore and install something else if you want, there is a lot of options [there](https://github.com/containernetworking/cni#who-is-using-cni).
 
 ```bash
-helm install --kube-config admin.conf cilium cilium/cilium --version 1.12.4 --namespace kube-system
+helm install --kubeconfig admin.conf cilium cilium/cilium \
+--version 1.12.4 --namespace kube-system \
+--set k8sServiceHost=127.0.0.1 --set k8sServicePort=6443
 ```
 
 ### kubelet
@@ -528,10 +532,6 @@ Let's start the `kubelet` component. It will register our current machine as a n
 '[ctrl]-b' and then ': new -s kubelet'
 ./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true --container-runtime=remote --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
 ```
-
-### kube-proxy
-
-
 
 ## The end
 
