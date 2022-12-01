@@ -67,10 +67,11 @@ rm containerd-1.6.10-linux-amd64.tar.gz
 
 ### Misc
 
-We need `cfssl` tool to generate certificates. Install it.
+We need `cfssl` tool to generate certificates. Install it (see [github.com/cloudflare/cfssl](https://github.com/cloudflare/cfssl#installation)).
 
+To install cilium (CNI plugin), the easiest way is to use `helm` (see [helm.sh/docs](https://helm.sh/docs/intro/install/)).
 
-Optionally, to ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends. Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) ;-)
+Optionally, to ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends. Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) should you need it ;-).
 
 Optionally as well, `curl` is a nice addition to play with API server.
 
@@ -192,9 +193,11 @@ cfssl gencert \
   ${CERT}-csr.json | cfssljson -bare ${CERT}
 done
 
+{
+INSTANCE=instance-2022-12-01-11-57-36
 cat > kubelet-csr.json <<EOF
 {
-  "CN": "system:node:kubelet",
+  "CN": "system:node:${INSTANCE}",
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -214,7 +217,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${LOCALIP},127.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -hostname=${LOCALIP},127.0.0.1,${INSTANCE} \
   -profile=kubernetes \
   kubelet-csr.json | cfssljson -bare kubelet
 }
@@ -263,7 +266,7 @@ Last but not least, a lot of files will be created in various places. **Running 
 
 We will create the admin kube config file in `/etc/kubernetes/admin.conf`
 
-```
+```bash
 #launch tmux as root
 tmux new -t bash
 
@@ -287,9 +290,11 @@ kubectl config set-context demystifions-kubernetes \
 kubectl config use-context demystifions-kubernetes
 ```
 
+TODO factorize
+
 Create one for `kube-controller-manager`
 
-```
+```bash
 {
 export KUBECONFIG=kube-controller-manager.conf
 kubectl config set-cluster demystifions-kubernetes \
@@ -310,7 +315,7 @@ kubectl config use-context kube-controller-manager
 }
 ```
 
-And one for `kubelet`
+One for `kubelet`
 
 ```bash
 {
@@ -330,6 +335,29 @@ kubectl config set-context kubelet \
   --user=system:node:kubelet
 
 kubectl config use-context kubelet
+}
+```
+
+One for `kube-scheduler`
+
+```bash
+{
+export KUBECONFIG=kube-scheduler.conf
+kubectl config set-cluster demystifions-kubernetes \
+  --certificate-authority=certs/ca.pem \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443
+
+kubectl config set-credentials kube-scheduler \
+  --embed-certs=true \
+  --client-certificate=certs/kube-scheduler.pem \
+  --client-key=certs/kube-scheduler-key.pem
+
+kubectl config set-context kube-scheduler \
+  --cluster=demystifions-kubernetes \
+  --user=kube-scheduler
+
+kubectl config use-context kube-scheduler
 }
 ```
 
@@ -355,7 +383,7 @@ Now we can start the `kube-apiserver`
 #create a new tmux session for apiserver
 '[ctrl]-b' and then ': new -s apiserver'
 
-./kube-apiserver --authorization-mode=Node,RBAC --client-ca-file=certs/ca.pem\
+./kube-apiserver --allow-privileged --authorization-mode=Node,RBAC --client-ca-file=certs/ca.pem\
   --etcd-servers=https://127.0.0.1:2379 --etcd-cafile=certs/ca.pem --etcd-certfile=certs/kubernetes.pem --etcd-keyfile=certs/kubernetes-key.pem \
   --service-account-key-file=certs/service-account.pem --service-account-signing-key-file=certs/service-account-key.pem --service-account-issuer=https://kubernetes.default.svc.cluster.local \
   --tls-cert-file=certs/kubernetes.pem --tls-private-key-file=certs/kubernetes-key.pem
@@ -429,10 +457,14 @@ I1130 14:36:38.454244    1772 garbagecollector.go:163] Garbage collector: all re
 
 The *ReplicaSet* and then the *Pod* are created... but the Pod is stuck in `Pending` indefinitely!
 
-There are 3 things missing before the Pod can start:
-- we need a node to start the pod (kubelet + container runtime)
-- we need a CNI plugin to give an IP to the Pod
-- we need a scheduler to tell the Pod where to start (on the node)
+That's because there are many things missing before the Pod can start. 
+
+To start it, we still need:
+- a container runtime to run the containers in the pods
+- a scheduler to decide where to start the **Pod** (here we will have only one **Node** so this should be easy)
+- a CNI plugin to give an IP to the Pod
+- a kubelet to let kubernetes know *where* it can run the Pod (on a **Node**)
+
 
 ### container runtime
 
@@ -442,6 +474,34 @@ Let's start the container runtime `containerd` on our machine
 #create a new tmux session for containerd
 '[ctrl]-b' and then ': new -s containerd'
 ./containerd
+[...]
+INFO[2022-12-01T11:03:37.616892592Z] serving...                                    address=/run/containerd/containerd.sock
+INFO[2022-12-01T11:03:37.617062671Z] containerd successfully booted in 0.038455s  
+[...]
+```
+
+### kube-scheduler
+
+Let's now start the `kube-scheduler`
+
+```bash
+#create a new tmux session for scheduler
+'[ctrl]-b' and then ': new -s scheduler'
+./kube-scheduler --kubeconfig kube-scheduler.conf
+
+[...]
+I1201 12:54:40.814609    2450 secure_serving.go:210] Serving securely on [::]:10259
+I1201 12:54:40.814805    2450 tlsconfig.go:240] "Starting DynamicServingCertificateController"
+I1201 12:54:40.914977    2450 leaderelection.go:248] attempting to acquire leader lease kube-system/kube-scheduler...
+I1201 12:54:40.923268    2450 leaderelection.go:258] successfully acquired lease kube-system/kube-scheduler
+```
+
+### CNI plugin
+
+I like what they do at Isovalent so I'll pop this cluster with Cilium as CNI plugin. Feel free to explore and install something else if you want, there is a lot of options [there](https://github.com/containernetworking/cni#who-is-using-cni).
+
+```bash
+helm install --kube-config admin.conf cilium cilium/cilium --version 1.12.4 --namespace kube-system
 ```
 
 ### kubelet
@@ -451,14 +511,12 @@ Let's start the `kubelet` component. It will register our current machine as a n
 ```bash
 #create a new tmux session for kubelet
 '[ctrl]-b' and then ': new -s kubelet'
-./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true
+./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true --container-runtime=remote --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
 ```
-
-### CNI plugin
 
 ### kube-proxy
 
-### kube-scheduler
+
 
 ## The end
 
