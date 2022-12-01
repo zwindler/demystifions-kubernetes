@@ -19,7 +19,7 @@ rm kubernetes-server-linux-amd64.tar.gz
 rm -rf kubernetes
 ```
 
-Note: jpetazzo's repo mention a all-in-one binary call hyperkube which doesn't seem to exist anymore
+Note: jpetazzo's repo mention a all-in-one binary call `hyperkube` which doesn't seem to exist anymore
 
 ### etcd
 
@@ -70,9 +70,9 @@ rm containerd-1.6.10-linux-amd64.tar.gz
 We need `cfssl` tool to generate certificates. Install it.
 
 
-Optionnaly, to ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends. Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) ;-)
+Optionally, to ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends. Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) ;-)
 
-Optionnaly as well, `curl` is a nice addition to play with API server.
+Optionally as well, `curl` is a nice addition to play with API server.
 
 ### Certificates
 
@@ -152,12 +152,18 @@ cfssl gencert \
 }
 ```
 
-Generate all other certs
+Create those 2 variables
 
 ```
 #replace with you local ip address
 LOCALIP=YOUR.LOCAL.IP.ADDRESS
+
 KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
+```
+
+Generate all other certs
+
+```bash
 for CERT in kubernetes kube-controller-manager kube-scheduler service-account; do
 cat > ${CERT}-csr.json <<EOF
 {
@@ -211,7 +217,6 @@ cfssl gencert \
   -hostname=${LOCALIP},127.0.0.1,${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
   kubelet-csr.json | cfssljson -bare kubelet
-done
 }
 
 {
@@ -256,7 +261,7 @@ Last but not least, a lot of files will be created in various places. **Running 
 
 ### Authentication Configs
 
-We will create the admin kube config file in /etc/kubernetes/admin.conf
+We will create the admin kube config file in `/etc/kubernetes/admin.conf`
 
 ```
 #launch tmux as root
@@ -282,12 +287,12 @@ kubectl config set-context demystifions-kubernetes \
 kubectl config use-context demystifions-kubernetes
 ```
 
-Also create one for kube-controller-manager
+Create one for `kube-controller-manager`
 
 ```
 {
 export KUBECONFIG=kube-controller-manager.conf
-kubectl config set-cluster kube-controller-manager \
+kubectl config set-cluster demystifions-kubernetes \
   --certificate-authority=certs/ca.pem \
   --embed-certs=true \
   --server=https://127.0.0.1:6443
@@ -298,16 +303,39 @@ kubectl config set-credentials kube-controller-manager \
   --client-key=certs/kube-controller-manager-key.pem
 
 kubectl config set-context kube-controller-manager \
-  --cluster=kube-controller-manager \
+  --cluster=demystifions-kubernetes \
   --user=kube-controller-manager
 
 kubectl config use-context kube-controller-manager
 }
 ```
 
+And one for `kubelet`
+
+```bash
+{
+export KUBECONFIG=kubelet.conf
+kubectl config set-cluster demystifions-kubernetes \
+  --certificate-authority=certs/ca.pem \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443
+
+kubectl config set-credentials system:node:kubelet \
+  --client-certificate=certs/kubelet.pem \
+  --client-key=certs/kubelet-key.pem \
+  --embed-certs=true
+
+kubectl config set-context kubelet \
+  --cluster=demystifions-kubernetes \
+  --user=system:node:kubelet
+
+kubectl config use-context kubelet
+}
+```
+
 ### etcd
 
-We can't start the API server until we have an etcd backend to support it's persistance. So let's start with `etcd` command
+We can't start the API server until we have an `etcd` backend to support it's persistance. So let's start with `etcd` command
 
 ```bash
 #create a new tmux session for etcd
@@ -321,7 +349,7 @@ We can't start the API server until we have an etcd backend to support it's pers
 
 ### kube-apiserver
 
-Now we can start the apiserver
+Now we can start the `kube-apiserver`
 
 ```bash
 #create a new tmux session for apiserver
@@ -335,10 +363,10 @@ Now we can start the apiserver
 
 Note: you can then switch between sessions with '[ctrl]-b' and then '(' or ')'
 
-Get back to "terminal" tmux session and check that API server responds
+Get back to "bash" tmux session and check that API server responds
 
 ```bash
-'[ctrl]-b' and then ': attach -t terminal'
+'[ctrl]-b' and then ': attach -t bash'
 
 kubectl version --short
 ```
@@ -367,7 +395,7 @@ nodes                             no           v1                               
 persistentvolumeclaims            pvc          v1                                     true         PersistentVolumeClaim
 ```
 
-We can try to deploy a Deployment and see that the Deployment is created but not the Pods.
+We can try to deploy a *Deployment* and see that the *Deployment* is created but not the Pods.
 
 ```
 kubectl create deployment web --image=nginx
@@ -383,7 +411,7 @@ No resources found in default namespace.
 
 ### kube-controller-manager
 
-This is because most of Kubernetes magic is done by the kubernetes **Controller manager** (and the controllers it controls). Typically here, creating a Deployment will trigger the creation of a Replicaset, which in turn will create our Pods.
+This is because most of Kubernetes magic is done by the kubernetes **Controller manager** (and the controllers it controls). Typically here, creating a *Deployment* will trigger the creation of a *Replicaset*, which in turn will create our *Pods*.
 
 We can start the controller manager to fix this.
 
@@ -399,16 +427,32 @@ We can start the controller manager to fix this.
 I1130 14:36:38.454244    1772 garbagecollector.go:163] Garbage collector: all resource monitors have synced. Proceeding to collect garbage
 ```
 
-The ReplicaSet and then the Pod are created... but the Pod is stuck in `Pending` indefinately!
+The *ReplicaSet* and then the *Pod* are created... but the Pod is stuck in `Pending` indefinitely!
 
 There are 3 things missing before the Pod can start:
-- we need a node to start the pod
+- we need a node to start the pod (kubelet + container runtime)
 - we need a CNI plugin to give an IP to the Pod
 - we need a scheduler to tell the Pod where to start (on the node)
 
+### container runtime
+
+Let's start the container runtime `containerd` on our machine
+
+```bash
+#create a new tmux session for containerd
+'[ctrl]-b' and then ': new -s containerd'
+./containerd
+```
+
 ### kubelet
 
-Let's start the kubelet component. It will register our current machine as a node, which will allow future Pod scheduling later.
+Let's start the `kubelet` component. It will register our current machine as a node, which will allow future *Pod* scheduling later. It will also talk with containerd to launch/monitor/kill the containers of our *Pods*.
+
+```bash
+#create a new tmux session for kubelet
+'[ctrl]-b' and then ': new -s kubelet'
+./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true
+```
 
 ### CNI plugin
 
