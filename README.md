@@ -209,7 +209,7 @@ cfssl gencert \
 done
 
 {
-INSTANCE=instance-2022-12-01-11-57-36
+INSTANCE=instance-2022-12-01-15-47-29
 cat > kubelet-csr.json <<EOF
 {
   "CN": "system:node:${INSTANCE}",
@@ -273,7 +273,7 @@ cd ..
 
 ### Warning
 
-Last but not least, a lot of files will be created in various places. **Running as root for this tutorial will save you from a world of pain**, even though this is really bad practice. Just don't do it outside of here (please).
+Last but not least, a lot of files will be created in various places. For convenience, **running as root (using sudo) for this tutorial will save you from a world of pain**, even though this is really bad practice. Just don't do it outside of here (please).
 
 ## Kubernetes bootstrap
 
@@ -435,7 +435,7 @@ Let's start the container runtime `containerd` on our machine
 ```bash
 #create a new tmux session for containerd
 '[ctrl]-b' and then ': new -s containerd'
-./containerd
+sudo ./containerd
 [...]
 INFO[2022-12-01T11:03:37.616892592Z] serving...                                    address=/run/containerd/containerd.sock
 INFO[2022-12-01T11:03:37.617062671Z] containerd successfully booted in 0.038455s  
@@ -449,7 +449,7 @@ Let's start the `kubelet` component. It will register our current machine as a n
 ```bash
 #create a new tmux session for kubelet
 '[ctrl]-b' and then ': new -s kubelet'
-./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true --container-runtime=remote --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
+sudo ./kubelet --fail-swap-on=false --kubeconfig kubelet.conf --register-node=true --container-runtime=remote --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
 ```
 
 ### kube-proxy
@@ -459,7 +459,7 @@ Let's now start the `kube-proxy`
 ```bash
 #create a new tmux session for proxy
 '[ctrl]-b' and then ': new -s proxy'
-./kube-proxy --kubeconfig kube-proxy.conf
+sudo ./kube-proxy --kubeconfig kube-proxy.conf
 ```
 
 ### CNI plugin
@@ -467,6 +467,8 @@ Let's now start the `kube-proxy`
 Deploy Calico
 
 ```bash
+export KUBECONFIG=admin.conf
+export PATH=$PATH:${pwd}
 helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
 
 kubectl create namespace tigera-operator
