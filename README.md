@@ -6,7 +6,7 @@ With his blessing, I was strongly inspired by Jérôme Petazzoni's excellent rep
 
 I also adapted parts of [Kelsey Hightower's kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (the TLS certs).
 
-I'm going to launch this on a clean VM running Ubuntu 22.04.
+I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this VM must be **kubernetes**.
 
 ### api-server & friends
 
@@ -167,15 +167,6 @@ cfssl gencert \
 }
 ```
 
-Create those 2 variables
-
-```
-#replace with you local ip address
-LOCALIP=YOUR.LOCAL.IP.ADDRESS
-
-KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
-```
-
 Generate all other certs
 
 ```bash
@@ -202,20 +193,19 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${LOCALIP},127.0.0.1,10.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -hostname=127.0.0.1,10.0.0.1,kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local \
   -profile=kubernetes \
   ${CERT}-csr.json | cfssljson -bare ${CERT}
 done
 ```
 
-DON'T FORGET TO CHANGE INSTANCE VARIABLE
+Create a csr for kubelet
 
 ```bash
 {
-INSTANCE=NameOfYourVM
 cat > kubelet-csr.json <<EOF
 {
-  "CN": "system:node:${INSTANCE}",
+  "CN": "system:node:kubernetes",
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -235,7 +225,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${LOCALIP},127.0.0.1,10.0.0.1,${INSTANCE} \
+  -hostname=127.0.0.1,10.0.0.1,${INSTANCE} \
   -profile=kubernetes \
   kubelet-csr.json | cfssljson -bare kubelet
 }
