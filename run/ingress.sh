@@ -1,3 +1,6 @@
+#!/bin/bash
+
+PATH=$PATH:${pwd}
 helm repo add traefik https://traefik.github.io/charts
 "traefik" has been added to your repositories
 

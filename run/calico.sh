@@ -1,6 +1,6 @@
-#!/bin/bash
-export KUBECONFIG=admin.conf
-export PATH=$PATH:${pwd}
+#!/bin/bashPATH=$PATH:$(pwd)
+
+PATH=$PATH:${pwd}
 helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
 
 kubectl create namespace tigera-operator

@@ -1,4 +1,6 @@
 #!/bin/bash
+PATH=$PATH:${pwd}
+
 sudo apt update -y
 sudo apt upgrade -y
 sudo apt install tmux curl golang-cfssl -y

@@ -1,2 +1,3 @@
 #!/bin/bash
-./kube-scheduler --kubeconfig kube-scheduler.conf
+PATH=$PATH:${pwd}
+kube-scheduler --kubeconfig kube-scheduler.conf

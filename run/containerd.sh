@@ -1,2 +1,3 @@
 #!/bin/bash
-sudo ./containerd
+PATH=$PATH:${pwd}
+sudo containerd

@@ -170,3 +170,5 @@ kubectl config set-context ${COMPONENT} \
 
 kubectl config use-context ${COMPONENT}
 done
+
+mkdir ~/.kube && cp admin.conf ~/.kube/config
