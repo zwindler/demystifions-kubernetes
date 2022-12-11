@@ -1,6 +1,4 @@
 #!/bin/bash
-PATH=$PATH:${pwd}
-
 sudo apt update -y
 sudo apt upgrade -y
 sudo apt install tmux curl golang-cfssl -y
@@ -29,3 +27,5 @@ rm containerd-1.6.10-linux-amd64.tar.gz
 curl https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 -L -o runc
 chmod +x runc
 sudo mv runc /usr/bin/
+
+mv kubectl /usr/local/bin

@@ -1,13 +1,10 @@
 #!/bin/bash
-
-PATH=$PATH:${pwd}
 helm repo add traefik https://traefik.github.io/charts
 "traefik" has been added to your repositories
 
 helm install traefik traefik/traefik
 
 ### Ingress
-
 cat > ingress.yaml << EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress

@@ -1,3 +1,2 @@
 #!/bin/bash
-PATH=$PATH:${pwd}
-kube-scheduler --kubeconfig admin.conf
+./kube-scheduler --kubeconfig admin.conf

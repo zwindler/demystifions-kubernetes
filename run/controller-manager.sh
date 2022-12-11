@@ -1,6 +1,5 @@
 #!/bin/bash
-PATH=$PATH:${pwd}
-kube-controller-manager \
+./kube-controller-manager \
 --kubeconfig admin.conf \
 --cluster-signing-cert-file=certs/ca.pem \
 --cluster-signing-key-file=certs/ca-key.pem \

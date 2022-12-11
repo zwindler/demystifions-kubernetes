@@ -277,7 +277,6 @@ We will create a bunch of kubeconfig files using the certs we generated. We'll u
 ```bash
 #launch tmux
 tmux new -t bash
-export PATH=$PATH:${pwd}
 
 for COMPONENT in admin kube-controller-manager kube-scheduler kubelet kube-proxy; do
 export KUBECONFIG=${COMPONENT}.conf
@@ -455,9 +454,28 @@ sudo ./kubelet --fail-swap-on=false --kubeconfig kubelet.conf \
 --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
 ```
 
+We are going to get error messages telling us that we have no CNI plugin
+
+```bash
+E1211 21:13:22.555830   27332 kubelet.go:2373] "Container runtime network not ready" networkReady="NetworkReady=false reason:NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized"
+E1211 21:13:27.556616   27332 kubelet.go:2373] "Container runtime network not ready" networkReady="NetworkReady=false reason:NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized"
+E1211 21:13:32.558180   27332 kubelet.go:2373] "Container runtime network not ready" networkReady="NetworkReady=false reason:NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized"
+```
+
+### CNI plugin
+
+I chose Calico as CNI plugin but there are many more options out there. Here I just deploy the chart and let Calico do the magic.
+
+```bash
+helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
+
+kubectl create namespace tigera-operator
+helm install calico projectcalico/tigera-operator --version v3.24.5 --namespace tigera-operator
+```
+
 ### kube-proxy
 
-Do deal with networking inside Kubernetes, we also need a few last things. A `kube-proxy` (which in some cases can be removed) and a CNI plugin. Let's start the `kube-proxy`:
+To deal with networking inside Kubernetes, we need a few last things. A `kube-proxy` (which in some cases can be removed) and a CNI plugin. Let's start the `kube-proxy`:
 
 ```bash
 #create a new tmux session for proxy
@@ -475,19 +493,6 @@ NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
 kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP   38m
 web          ClusterIP   10.0.0.34    <none>        80/TCP    67s
 
-```
-
-### CNI plugin
-
-I chose Calico as CNI plugin but there are many more options out there. Here I just deploy the chart and let Calico do the magic.
-
-```bash
-export KUBECONFIG=admin.conf
-export PATH=$PATH:${pwd}
-helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
-
-kubectl create namespace tigera-operator
-helm install calico projectcalico/tigera-operator --version v3.24.5 --namespace tigera-operator
 ```
 
 ### IngressController
@@ -607,4 +612,4 @@ Now, you should have a working "one node kubernetes cluster"
 
 ### Cleanup
 
-You should clear the `/var/lib/kubelet` directory and remove the `/usr/bin/runc` binary
+You should clear the `/var/lib/kubelet` directory and remove the `/usr/bin/runc` and `/usr/local/bin/kubectl` binaries

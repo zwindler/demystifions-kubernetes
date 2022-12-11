@@ -150,8 +150,6 @@ cfssl gencert \
 
 cd ..
 
-export PATH=$PATH:${pwd}
-
 for COMPONENT in admin kube-controller-manager kube-scheduler kubelet kube-proxy; do
 export KUBECONFIG=${COMPONENT}.conf
 kubectl config set-cluster demystifions-kubernetes \

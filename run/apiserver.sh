@@ -1,7 +1,5 @@
 #!/bin/bash
-PATH=$PATH:$(pwd)
-
-kube-apiserver --allow-privileged --authorization-mode=Node,RBAC \
+./kube-apiserver --allow-privileged --authorization-mode=Node,RBAC \
 --client-ca-file=certs/ca.pem \
 --etcd-cafile=certs/ca.pem \
 --etcd-certfile=certs/kubernetes.pem \
