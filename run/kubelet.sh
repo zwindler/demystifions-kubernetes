@@ -1,6 +1,7 @@
 #!/bin/bash
-PATH=$PATH:${pwd}
-
-sudo kubelet --fail-swap-on=false --kubeconfig kubelet.conf \
---register-node=true --container-runtime=remote \
---container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
+sudo ./kubelet \
+--container-runtime=remote \
+--container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \
+--fail-swap-on=false \
+--kubeconfig admin.conf \
+--register-node=true

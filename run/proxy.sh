@@ -1,8 +1,6 @@
 #!/bin/bash
-PATH=$PATH:${pwd}
+sudo ./kube-proxy --kubeconfig admin.conf
 
-sudo kube-proxy --kubeconfig kube-proxy.conf
-
-kubectl expose deployment web --port=80
-
-kubectl get svc
+# try this
+# kubectl expose deployment web --port=80
+# kubectl get svc
