@@ -1,5 +1,5 @@
 #!/bin/bash
-mkdir certs && cd certs
+mkdir -p certs && cd certs
 
 {
 cat > ca-config.json <<EOF
@@ -85,4 +85,4 @@ kubectl config set-context admin \
 
 kubectl config use-context admin
 
-mkdir ~/.kube && cp admin.conf ~/.kube/config
+mkdir -p ~/.kube && cp admin.conf ~/.kube/config
