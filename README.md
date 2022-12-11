@@ -76,7 +76,7 @@ rm containerd-1.6.10-linux-amd64.tar.gz
 ```bash
 curl https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 -L -o runc
 chmod +x runc
-mv runc /usr/bin/
+sudo mv runc /usr/bin/
 ```
 
 ### Misc
