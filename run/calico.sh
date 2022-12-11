@@ -1,4 +1,4 @@
-#!/bin/bashPATH=$PATH:$(pwd)
+#!/bin/bash
 
 PATH=$PATH:${pwd}
 helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
