@@ -136,7 +136,7 @@ cfssl gencert -initca ca-csr.json | cfssljson -bare ca
 }
 ```
 
-Generate admin certs
+Generate the admin certs (will be used for everything, bad practice).
 
 ```bash
 {
@@ -167,135 +167,44 @@ cfssl gencert \
 }
 ```
 
-Generate all other certs
-
-```bash
-for CERT in kubernetes kube-controller-manager kube-scheduler service-account; do
-cat > ${CERT}-csr.json <<EOF
-{
-  "CN": "system:${CERT}",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "FR",
-      "L": "Pessac",
-      "O": "system:${CERT}",
-      "OU": "Démystifions Kubernetes",
-      "ST": "Nouvelle Aquitaine"
-    }
-  ]
-}
-EOF
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -hostname=127.0.0.1,10.0.0.1,kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local \
-  -profile=kubernetes \
-  ${CERT}-csr.json | cfssljson -bare ${CERT}
-done
-```
-
-Create a csr for kubelet
-
-```bash
-{
-cat > kubelet-csr.json <<EOF
-{
-  "CN": "system:node:kubernetes",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "FR",
-      "L": "Pessac",
-      "O": "system:nodes",
-      "OU": "Démystifions Kubernetes",
-      "ST": "Nouvelle Aquitaine"
-    }
-  ]
-}
-EOF
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -hostname=127.0.0.1,10.0.0.1,${INSTANCE} \
-  -profile=kubernetes \
-  kubelet-csr.json | cfssljson -bare kubelet
-}
-
-{
-cat > kube-proxy-csr.json <<EOF
-{
-  "CN": "system:kube-proxy",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "FR",
-      "L": "Pessac",
-      "O": "system:node-proxier",
-      "OU": "Démystifions Kubernetes",
-      "ST": "Nouvelle Aquitaine"
-    }
-  ]
-}
-EOF
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
-  kube-proxy-csr.json | cfssljson -bare kube-proxy
-}
-```
-
 Get back in main dir
 
 ```bash
 cd ..
 ```
 
-### Warning
+### Warnings
 
-Last but not least, a lot of files will be created in various places. For convenience, **running as root (using sudo) for this tutorial will save you from a world of pain**, even though this is really bad practice. Just don't do it outside of here (please).
+We are going to use admin cert for ALL components of Kubernetes. Please don't do this, this is really bad practice. All components should have separate certificates (some even need more than one). See [PKI certificates and requirements](https://kubernetes.io/docs/setup/best-practices/certificates/) in the official documentation for more information on this topic.
+
+Also, a lot of files will be created in various places, and sometime they need priviledges to do so. For convenience, some binaries will be launched as **root** (`containerd`, `kubelet`, `kube-proxy`) using `sudo`.
 
 ## Kubernetes bootstrap
 
 ### Authentication Configs
 
-We will create a bunch of kubeconfig files using the certs we generated. We'll use them later:
+We will create a kubeconfig files using the certs we generated. We'll use them later:
 
 ```bash
 #launch tmux
 tmux new -t bash
 
-for COMPONENT in admin kube-controller-manager kube-scheduler kubelet kube-proxy; do
-export KUBECONFIG=${COMPONENT}.conf
+export KUBECONFIG=admin.conf
 kubectl config set-cluster demystifions-kubernetes \
   --certificate-authority=certs/ca.pem \
   --embed-certs=true \
   --server=https://127.0.0.1:6443
 
-kubectl config set-credentials ${COMPONENT} \
+kubectl config set-credentials admin \
   --embed-certs=true \
-  --client-certificate=certs/${COMPONENT}.pem \
-  --client-key=certs/${COMPONENT}-key.pem
+  --client-certificate=certs/admin.pem \
+  --client-key=certs/admin-key.pem
 
-kubectl config set-context ${COMPONENT} \
+kubectl config set-context admin \
   --cluster=demystifions-kubernetes \
-  --user=${COMPONENT}
+  --user=admin
 
-kubectl config use-context ${COMPONENT}
-done
+kubectl config use-context admin
 ```
 
 ### etcd
@@ -309,8 +218,8 @@ We can't start the API server until we have an `etcd` backend to support it's pe
 ./etcd --advertise-client-urls https://127.0.0.1:2379 \
 --client-cert-auth \
 --data-dir etcd-data \
---cert-file=certs/kubernetes.pem \
---key-file=certs/kubernetes-key.pem \
+--cert-file=certs/admin.pem \
+--key-file=certs/admin-key.pem \
 --listen-client-urls https://127.0.0.1:2379 \
 --trusted-ca-file=certs/ca.pem
 [...]
@@ -329,14 +238,14 @@ Now we can start the `kube-apiserver`:
 --authorization-mode=Node,RBAC \
 --client-ca-file=certs/ca.pem \
 --etcd-cafile=certs/ca.pem \
---etcd-certfile=certs/kubernetes.pem \
---etcd-keyfile=certs/kubernetes-key.pem \
+--etcd-certfile=certs/admin.pem \
+--etcd-keyfile=certs/admin-key.pem \
 --etcd-servers=https://127.0.0.1:2379 \
---service-account-key-file=certs/kubernetes.pem \
---service-account-signing-key-file=certs/kubernetes-key.pem \
+--service-account-key-file=certs/admin.pem \
+--service-account-signing-key-file=certs/admin-key.pem \
 --service-account-issuer=https://kubernetes.default.svc.cluster.local \
---tls-cert-file=certs/kubernetes.pem \
---tls-private-key-file=certs/kubernetes-key.pem
+--tls-cert-file=certs/admin.pem \
+--tls-private-key-file=certs/admin-key.pem
 ```
 
 Note: you can then switch between sessions with '[ctrl]-b' and then '(' or ')'
@@ -401,7 +310,7 @@ We can start the controller manager to fix this.
 --kubeconfig admin.conf \
 --cluster-signing-cert-file=certs/ca.pem \
 --cluster-signing-key-file=certs/ca-key.pem \
---service-account-private-key-file=certs/kubernetes-key.pem \
+--service-account-private-key-file=certs/admin-key.pem \
 --use-service-account-credentials \
 --root-ca-file=certs/ca.pem
 [...]

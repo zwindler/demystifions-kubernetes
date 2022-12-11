@@ -65,108 +65,23 @@ cfssl gencert \
   admin-csr.json | cfssljson -bare admin
 }
 
-for CERT in kubernetes kube-controller-manager kube-scheduler service-account; do
-cat > ${CERT}-csr.json <<EOF
-{
-  "CN": "system:${CERT}",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "FR",
-      "L": "Pessac",
-      "O": "system:${CERT}",
-      "OU": "Démystifions Kubernetes",
-      "ST": "Nouvelle Aquitaine"
-    }
-  ]
-}
-EOF
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -hostname=127.0.0.1,10.0.0.1,kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local \
-  -profile=kubernetes \
-  ${CERT}-csr.json | cfssljson -bare ${CERT}
-done
-
-{
-cat > kubelet-csr.json <<EOF
-{
-  "CN": "system:node:kubernetes",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "FR",
-      "L": "Pessac",
-      "O": "system:nodes",
-      "OU": "Démystifions Kubernetes",
-      "ST": "Nouvelle Aquitaine"
-    }
-  ]
-}
-EOF
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -hostname=127.0.0.1,10.0.0.1,${INSTANCE} \
-  -profile=kubernetes \
-  kubelet-csr.json | cfssljson -bare kubelet
-}
-
-{
-cat > kube-proxy-csr.json <<EOF
-{
-  "CN": "system:kube-proxy",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "FR",
-      "L": "Pessac",
-      "O": "system:node-proxier",
-      "OU": "Démystifions Kubernetes",
-      "ST": "Nouvelle Aquitaine"
-    }
-  ]
-}
-EOF
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
-  kube-proxy-csr.json | cfssljson -bare kube-proxy
-}
-
 cd ..
 
-for COMPONENT in admin kube-controller-manager kube-scheduler kubelet kube-proxy; do
-export KUBECONFIG=${COMPONENT}.conf
+export KUBECONFIG=admin.conf
 kubectl config set-cluster demystifions-kubernetes \
   --certificate-authority=certs/ca.pem \
   --embed-certs=true \
   --server=https://127.0.0.1:6443
 
-kubectl config set-credentials ${COMPONENT} \
+kubectl config set-credentials admin \
   --embed-certs=true \
-  --client-certificate=certs/${COMPONENT}.pem \
-  --client-key=certs/${COMPONENT}-key.pem
+  --client-certificate=certs/admin.pem \
+  --client-key=certs/admin-key.pem
 
-kubectl config set-context ${COMPONENT} \
+kubectl config set-context admin \
   --cluster=demystifions-kubernetes \
-  --user=${COMPONENT}
+  --user=admin
 
-kubectl config use-context ${COMPONENT}
-done
+kubectl config use-context admin
 
 mkdir ~/.kube && cp admin.conf ~/.kube/config
