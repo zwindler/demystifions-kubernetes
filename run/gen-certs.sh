@@ -149,3 +149,24 @@ cfssl gencert \
 }
 
 cd ..
+
+export PATH=$PATH:${pwd}
+
+for COMPONENT in admin kube-controller-manager kube-scheduler kubelet kube-proxy; do
+export KUBECONFIG=${COMPONENT}.conf
+kubectl config set-cluster demystifions-kubernetes \
+  --certificate-authority=certs/ca.pem \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443
+
+kubectl config set-credentials ${COMPONENT} \
+  --embed-certs=true \
+  --client-certificate=certs/${COMPONENT}.pem \
+  --client-key=certs/${COMPONENT}-key.pem
+
+kubectl config set-context ${COMPONENT} \
+  --cluster=demystifions-kubernetes \
+  --user=${COMPONENT}
+
+kubectl config use-context ${COMPONENT}
+done
