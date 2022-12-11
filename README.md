@@ -306,10 +306,13 @@ We can't start the API server until we have an `etcd` backend to support it's pe
 #create a new tmux session for etcd
 '[ctrl]-b' and then ': new -s etcd'
 
-./etcd --data-dir etcd-data  --client-cert-auth --trusted-ca-file=certs/ca.pem \
---cert-file=certs/kubernetes.pem --key-file=certs/kubernetes-key.pem \
---advertise-client-urls https://127.0.0.1:2379 --listen-client-urls https://127.0.0.1:2379
-  
+./etcd --advertise-client-urls https://127.0.0.1:2379 \
+--client-cert-auth \
+--data-dir etcd-data \
+--cert-file=certs/kubernetes.pem \
+--key-file=certs/kubernetes-key.pem \
+--listen-client-urls https://127.0.0.1:2379 \
+--trusted-ca-file=certs/ca.pem
 [...]
 {"level":"info","ts":"2022-11-29T17:34:54.601+0100","caller":"embed/serve.go:198","msg":"serving client traffic securely","address":"127.0.0.1:2379"}
 ```
@@ -322,13 +325,18 @@ Now we can start the `kube-apiserver`:
 #create a new tmux session for apiserver
 '[ctrl]-b' and then ': new -s apiserver'
 
-./kube-apiserver --allow-privileged --authorization-mode=Node,RBAC \
---client-ca-file=certs/ca.pem --etcd-servers=https://127.0.0.1:2379 \
---etcd-cafile=certs/ca.pem --etcd-certfile=certs/kubernetes.pem --etcd-keyfile=certs/kubernetes-key.pem \
---service-account-key-file=certs/service-account.pem \
---service-account-signing-key-file=certs/service-account-key.pem \
+./kube-apiserver --allow-privileged \
+--authorization-mode=Node,RBAC \
+--client-ca-file=certs/ca.pem \
+--etcd-cafile=certs/ca.pem \
+--etcd-certfile=certs/kubernetes.pem \
+--etcd-keyfile=certs/kubernetes-key.pem \
+--etcd-servers=https://127.0.0.1:2379 \
+--service-account-key-file=certs/kubernetes.pem \
+--service-account-signing-key-file=certs/kubernetes-key.pem \
 --service-account-issuer=https://kubernetes.default.svc.cluster.local \
---tls-cert-file=certs/kubernetes.pem --tls-private-key-file=certs/kubernetes-key.pem
+--tls-cert-file=certs/kubernetes.pem \
+--tls-private-key-file=certs/kubernetes-key.pem
 ```
 
 Note: you can then switch between sessions with '[ctrl]-b' and then '(' or ')'
@@ -389,9 +397,12 @@ We can start the controller manager to fix this.
 #create a new tmux session for the controller manager
 '[ctrl]-b' and then ': new -s controller'
 
-./kube-controller-manager --kubeconfig kube-controller-manager.conf \
---cluster-signing-cert-file=certs/ca.pem --cluster-signing-key-file=certs/ca-key.pem \
---service-account-private-key-file=certs/service-account-key.pem --use-service-account-credentials \
+./kube-controller-manager \
+--kubeconfig admin.conf \
+--cluster-signing-cert-file=certs/ca.pem \
+--cluster-signing-key-file=certs/ca-key.pem \
+--service-account-private-key-file=certs/kubernetes-key.pem \
+--use-service-account-credentials \
 --root-ca-file=certs/ca.pem
 [...]
 I1130 14:36:38.454244    1772 garbagecollector.go:163] Garbage collector: all resource monitors have synced. Proceeding to collect garbage
@@ -410,7 +421,7 @@ Let's now start the `kube-scheduler`:
 ```bash
 #create a new tmux session for scheduler
 '[ctrl]-b' and then ': new -s scheduler'
-./kube-scheduler --kubeconfig kube-scheduler.conf
+./kube-scheduler --kubeconfig admin.conf
 
 [...]
 I1201 12:54:40.814609    2450 secure_serving.go:210] Serving securely on [::]:10259
@@ -449,9 +460,12 @@ The role of the kubelet is also to talk with containerd to launch/monitor/kill t
 ```bash
 #create a new tmux session for kubelet
 '[ctrl]-b' and then ': new -s kubelet'
-sudo ./kubelet --fail-swap-on=false --kubeconfig kubelet.conf \
---register-node=true --container-runtime=remote \
---container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
+sudo ./kubelet \
+--container-runtime=remote \
+--container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \
+--fail-swap-on=false \
+--kubeconfig admin.conf \
+--register-node=true
 ```
 
 We are going to get error messages telling us that we have no CNI plugin
@@ -464,7 +478,9 @@ E1211 21:13:32.558180   27332 kubelet.go:2373] "Container runtime network not re
 
 ### CNI plugin
 
-I chose Calico as CNI plugin but there are many more options out there. Here I just deploy the chart and let Calico do the magic.
+To deal with networking inside Kubernetes, we need a few last things. A `kube-proxy` (which in some cases can be removed) and a CNI plugin. 
+
+For CNI plugin, I chose Calico but there are many more options out there. Here I just deploy the chart and let Calico do the magic.
 
 ```bash
 helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
@@ -475,12 +491,12 @@ helm install calico projectcalico/tigera-operator --version v3.24.5 --namespace 
 
 ### kube-proxy
 
-To deal with networking inside Kubernetes, we need a few last things. A `kube-proxy` (which in some cases can be removed) and a CNI plugin. Let's start the `kube-proxy`:
+Let's start the `kube-proxy`:
 
 ```bash
 #create a new tmux session for proxy
 '[ctrl]-b' and then ': new -s proxy'
-sudo ./kube-proxy --kubeconfig kube-proxy.conf
+sudo ./kube-proxy --kubeconfig admin.conf
 ```
 
 Then, we are going to create a ClusterIP service to obtain a stable IP address (and load balancer) for our deployment.
@@ -514,10 +530,9 @@ traefik      LoadBalancer   10.0.0.86    <pending>     80:31889/TCP,443:31297/TC
 web          ClusterIP      10.0.0.34    <none>        80/TCP                       21m
 ```
 
-Notice the Ports on the traefik line: **
-**.
+Notice the Ports on the traefik line: **80:31889/TCP,443:31297/TCP** in my example.
 
-Provided that DNS can resolve domain.tld to the IP of our Node, we can now access Traefik from the Internet by using http://domain.tld:31889 (and https://domain.tld:31297)
+Provided that DNS can resolve domain.tld to the IP of our Node, we can now access Traefik from the Internet by using http://domain.tld:31889 (and https://domain.tld:31297).
 
 But how can we connect to our website?
 
