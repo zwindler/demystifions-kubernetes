@@ -28,4 +28,4 @@ curl https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 
 chmod +x runc
 sudo mv runc /usr/bin/
 
-mv kubectl /usr/local/bin
+sudo mv kubectl /usr/local/bin
