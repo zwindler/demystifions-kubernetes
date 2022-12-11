@@ -13,8 +13,9 @@ kube-apiserver --allow-privileged --authorization-mode=Node,RBAC \
 --tls-cert-file=certs/kubernetes.pem \
 --tls-private-key-file=certs/kubernetes-key.pem
 
-kubectl version --short
+# Try this
+# kubectl version --short
 
-kubectl api-resources | head
+# kubectl api-resources | head
 
-kubectl create deployment web --image=nginx
+# kubectl create deployment web --image=nginx
