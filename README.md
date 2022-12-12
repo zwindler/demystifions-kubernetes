@@ -285,9 +285,41 @@ persistentvolumeclaims            pvc          v1                               
 We can try to deploy a *Deployment* and see that the *Deployment* is created but not the *Pods*.
 
 ```
-kubectl create deployment web --image=nginx
-deployment.apps/web created
+cat > deploy.yaml << EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: web
+  name: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - image: zwindler/dk
+        name: nginx
+EOF
+kubectl apply -f deploy.yaml
 
+#or
+#kubectl create deployment web --image=nginx
+```
+
+You should get the following message:
+```bash
+deployment.apps/web created
+```
+
+But... nothing happens
+
+```bash
 kubectl get deploy
 NAME   READY   UP-TO-DATE   AVAILABLE   AGE
 web    0/1     0            0           3m38s
@@ -411,7 +443,25 @@ sudo ./kube-proxy --kubeconfig admin.conf
 Then, we are going to create a ClusterIP service to obtain a stable IP address (and load balancer) for our deployment.
 
 ```bash
-kubectl expose deployment web --port=80
+cat > service.yaml << EOF
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: web
+  name: web
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: web
+EOF
+kubectl apply -f service.yaml
+
+#or
+#kubectl expose deployment web --port=80
 
 kubectl get svc
 NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
