@@ -452,7 +452,7 @@ metadata:
   name: web
 spec:
   ports:
-  - port: 80
+  - port: 3000
     protocol: TCP
     targetPort: 80
   selector:
@@ -460,13 +460,10 @@ spec:
 EOF
 kubectl apply -f service.yaml
 
-#or
-#kubectl expose deployment web --port=80
-
 kubectl get svc
 NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
 kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP   38m
-web          ClusterIP   10.0.0.34    <none>        80/TCP    67s
+web          ClusterIP   10.0.0.34    <none>        3000/TCP  67s
 
 ```
 
@@ -486,7 +483,7 @@ kubectl get svc
 NAME         TYPE           CLUSTER-IP   EXTERNAL-IP   PORT(S)                      AGE
 kubernetes   ClusterIP      10.0.0.1     <none>        443/TCP                      58m
 traefik      LoadBalancer   10.0.0.86    <pending>     80:31889/TCP,443:31297/TCP   70s
-web          ClusterIP      10.0.0.34    <none>        80/TCP                       21m
+web          ClusterIP      10.0.0.34    <none>        3000/TCP                     21m
 ```
 
 Notice the Ports on the traefik line: **80:31889/TCP,443:31297/TCP** in my example.
@@ -515,7 +512,7 @@ spec:
               service:
                 name:  web
                 port:
-                  number: 80
+                  number: 3000
 EOF
 kubectl apply -f ingress.yaml
 ```
