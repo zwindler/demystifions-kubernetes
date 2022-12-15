@@ -5,7 +5,7 @@ sudo apt install tmux curl golang-cfssl -y
 
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-curl -L https://dl.k8s.io/v1.25.4/kubernetes-server-linux-amd64.tar.gz -o kubernetes-server-linux-amd64.tar.gz
+curl -L https://dl.k8s.io/v1.26.0/kubernetes-server-linux-amd64.tar.gz -o kubernetes-server-linux-amd64.tar.gz
 tar -zxf kubernetes-server-linux-amd64.tar.gz
 for BINARY in kubectl kube-apiserver kube-scheduler kube-controller-manager kubelet kube-proxy;
 do
