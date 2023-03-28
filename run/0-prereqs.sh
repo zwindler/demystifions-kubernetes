@@ -36,3 +36,6 @@ chmod +x runc
 sudo mv runc /usr/bin/
 
 sudo mv kubectl /usr/local/bin
+
+# disable swap
+sudo swapoff -a
