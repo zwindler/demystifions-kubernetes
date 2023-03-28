@@ -3,7 +3,7 @@
 CONTAINERD_OPTS="--container-runtime=remote \
                  --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock"
 
-sudo ./kubelet \
+sudo ./kubelet ${CONTAINERD_OPTS} \
 --kubeconfig admin.conf \
 --register-node=true
 
