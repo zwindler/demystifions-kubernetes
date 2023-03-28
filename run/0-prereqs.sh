@@ -7,6 +7,7 @@ K8S_VERSION=1.26.3
 ETCD_VERSION=3.5.7
 CONTAINERD_VERSION=1.7.0
 RUNC_VERSION=1.1.4
+CILIUM_VERSION=0.13.2
 ARCH=amd64
 
 # YOLO
@@ -34,6 +35,8 @@ rm containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
 curl https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH} -L -o runc
 chmod +x runc
 sudo mv runc /usr/bin/
+
+wget https://github.com/cilium/cilium-cli/releases/download/v${CILIUM_VERSION}/cilium-linux-${ARCH}.tar.gz
 
 sudo mv kubectl /usr/local/bin
 # add kubectl autocomplete
