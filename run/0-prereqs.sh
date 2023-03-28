@@ -36,6 +36,8 @@ chmod +x runc
 sudo mv runc /usr/bin/
 
 sudo mv kubectl /usr/local/bin
+# add kubectl autocomplete
+echo 'source <(kubectl completion bash)' >>~/.bashrc
 
 # disable swap
 sudo swapoff -a
