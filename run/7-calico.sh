@@ -2,6 +2,7 @@
 helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
 kubectl create namespace tigera-operator
 
+# to avoid conflict on 10.0.0.0/16 routing on some provider, create with a new subnet
 cat > values.yaml <<EOF
 installation:
   cni:
