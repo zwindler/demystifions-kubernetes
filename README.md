@@ -584,3 +584,5 @@ Now, you should have a working "one node kubernetes cluster"
 ### Cleanup
 
 You should clear the `/var/lib/kubelet` directory and remove the `/usr/bin/runc` and `/usr/local/bin/kubectl` binaries
+
+If you want to run the lab again, also clear etcd-data directory or even the whole demystifions-kubernetes folder and `git clone` it again
