@@ -22,6 +22,6 @@ spec:
               service:
                 name:  web
                 port:
-                  number: 80
+                  number: 3000
 EOF
 kubectl apply -f ingress.yaml
