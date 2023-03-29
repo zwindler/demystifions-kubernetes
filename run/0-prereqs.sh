@@ -44,8 +44,8 @@ tar xzf cilium-linux-${ARCH}.tar.gz
 rm cilium-linux-${ARCH}.tar.gz
 
 # Optional: prerequisites for flannel use
-mkdir -p /opt/cni/bin
-curl -O -L https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGINS_VERSION}/cni-plugins-linux-arm64-v${CNI_PLUGINS_VERSION}.tgz
+sudo mkdir -p /opt/cni/bin
+curl -O -L https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGINS_VERSION}/cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
 sudo tar -C /opt/cni/bin -xzf cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
 
 sudo mv kubectl /usr/local/bin
