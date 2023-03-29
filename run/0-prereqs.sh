@@ -40,7 +40,7 @@ chmod +x runc
 sudo mv runc /usr/bin/
 
 wget https://github.com/cilium/cilium-cli/releases/download/v${CILIUM_VERSION}/cilium-linux-${ARCH}.tar.gz
-tar xzf cilium-linux-arm64.tar.gz
+tar xzf cilium-linux-${ARCH}.tar.gz
 rm cilium-linux-${ARCH}.tar.gz
 
 # Optional: prerequisites for flannel use
