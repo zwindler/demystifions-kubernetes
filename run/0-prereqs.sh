@@ -8,7 +8,10 @@ ETCD_VERSION=3.5.7
 CONTAINERD_VERSION=1.7.0
 RUNC_VERSION=1.1.4
 CILIUM_VERSION=0.13.2
-ARCH=amd64
+CNI_PLUGINS_VERSION=1.2.0
+
+# change arch if necessary
+if [ -z "$1" ]; then ARCH=amd64; else ARCH=$1; fi
 
 # YOLO
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -38,9 +41,19 @@ sudo mv runc /usr/bin/
 
 wget https://github.com/cilium/cilium-cli/releases/download/v${CILIUM_VERSION}/cilium-linux-${ARCH}.tar.gz
 
+# Optional: prerequisites for flannel use
+mkdir -p /opt/cni/bin
+curl -O -L https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGINS_VERSION}/cni-plugins-linux-arm64-v${CNI_PLUGINS_VERSION}.tgz
+sudo tar -C /opt/cni/bin -xzf cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
+rm cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
+
 sudo mv kubectl /usr/local/bin
 # add kubectl autocomplete
 echo 'source <(kubectl completion bash)' >>~/.bashrc
 
 # disable swap
 sudo swapoff -a
+
+# remove firewall on ubuntu in Oracle cloud 
+sudo iptables -F
+sudo netfilter-persistent save
