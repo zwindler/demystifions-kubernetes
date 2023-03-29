@@ -5,5 +5,5 @@ sudo pkill etcd
 
 rm -rf etcd-data
 sudo rm -rf /var/lib/kubelet/
-sudo rm /usr/bin/runc
-sudo rm /usr/local/bin/kubectl
+sudo rm -f /usr/bin/runc
+sudo rm -f /usr/local/bin/kubectl
