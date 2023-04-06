@@ -4,6 +4,12 @@ helm install traefik traefik/traefik \
               --set ports.web.nodePort=30080 \
               --set ports.websecure.nodePort=30443
 
+if [ `uname -i` -eq 'x86_64' ]; then
+ARCH=amd64
+else
+ARCH=arm64
+fi
+
 ### Ingress
 cat > ingress.yaml << EOF
 apiVersion: networking.k8s.io/v1
@@ -13,7 +19,7 @@ metadata:
   namespace: default
 spec:
   rules:
-    - host: dk.zwindler.fr
+    - host: dk${ARCH}.zwindler.fr
       http:
         paths:
           - path: /
