@@ -6,6 +6,7 @@ sudo pkill etcd
 # remove cluster data
 rm -rf certs/
 rm -rf etcd-data/
+rm -f admin.conf
 
 # remove binaries
 sudo rm -f /usr/bin/runc
