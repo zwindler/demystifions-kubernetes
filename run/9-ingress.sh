@@ -5,9 +5,9 @@ helm install traefik traefik/traefik \
               --set ports.websecure.nodePort=30443
 
 if [ `uname -i` -eq 'x86_64' ]; then
-ARCH=amd64
+  ARCH=amd64
 else
-ARCH=arm64
+  ARCH=arm64
 fi
 
 ### Ingress
