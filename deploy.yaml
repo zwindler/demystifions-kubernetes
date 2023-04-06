@@ -16,4 +16,4 @@ spec:
     spec:
       containers:
       - image: zwindler/dk
-        name: nginx
+        name: web
