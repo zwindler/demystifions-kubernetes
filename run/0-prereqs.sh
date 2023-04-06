@@ -57,5 +57,8 @@ echo 'source <(kubectl completion bash)' >>~/.bashrc
 sudo swapoff -a
 
 # remove firewall on ubuntu in Oracle cloud 
-sudo iptables -F
-sudo netfilter-persistent save
+which netfilter-persistent
+if [ $? -eq 0 ]; then
+  sudo iptables -F
+  sudo netfilter-persistent save
+fi
