@@ -12,6 +12,10 @@ CNI_PLUGINS_VERSION=1.2.0
 
 # change arch if necessary
 if [ -z "$1" ]; then ARCH=amd64; else ARCH=$1; fi
+# in case I forget (which always happens)
+if [ `uname -i` == 'aarch64' ]; then
+  ARCH="arm64"
+fi
 
 # YOLO
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
