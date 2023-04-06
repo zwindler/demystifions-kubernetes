@@ -66,3 +66,6 @@ if [ $? -eq 0 ]; then
   sudo iptables -F
   sudo netfilter-persistent save
 fi
+
+# this will save me from forgetting generating certs
+run/0-gen-certs.sh
