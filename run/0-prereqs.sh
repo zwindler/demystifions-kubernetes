@@ -10,6 +10,8 @@ RUNC_VERSION=1.1.4
 CILIUM_VERSION=0.13.2
 CNI_PLUGINS_VERSION=1.2.0
 
+mkdir -p bin/
+
 # change arch if necessary
 if [ -z "$1" ]; then ARCH=amd64; else ARCH=$1; fi
 # in case I forget (which always happens)
