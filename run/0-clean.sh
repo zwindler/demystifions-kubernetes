@@ -11,7 +11,7 @@ rm -f admin.conf
 # remove binaries
 sudo rm -f /usr/bin/runc
 sudo rm -f /usr/local/bin/kubectl
-./cilium uninstall
+bin/cilium uninstall
 
 # clean directories containing infos from previous installs
 sudo rm -rf /var/lib/kubelet/
