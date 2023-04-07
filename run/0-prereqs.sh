@@ -29,8 +29,15 @@ done
 rm kubernetes-server-linux-${ARCH}.tar.gz
 rm -rf kubernetes
 
+sudo mv kubectl /usr/local/bin
+# add kubectl autocomplete
+echo 'source <(kubectl completion bash)' >>~/.bashrc
+
+mv kube* bin/
+
 curl -L https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz | 
-  tar --strip-components=1 --wildcards -zx '*/etcd' '*/etcdctl'
+  tar --strip-components=1 --wildcards -zx '*/etcd'
+mv etcd bin/
 
 mkdir etcd-data
 chmod 700 etcd-data
@@ -38,6 +45,7 @@ chmod 700 etcd-data
 wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
 tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' '*/containerd-shim-runc-v2' -f containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
 rm containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
+mv containerd* bin/
 
 curl https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH} -L -o runc
 chmod +x runc
@@ -46,16 +54,13 @@ sudo mv runc /usr/bin/
 wget https://github.com/cilium/cilium-cli/releases/download/v${CILIUM_VERSION}/cilium-linux-${ARCH}.tar.gz
 tar xzf cilium-linux-${ARCH}.tar.gz
 rm cilium-linux-${ARCH}.tar.gz
+mv cilium bin/
 
 # Optional: prerequisites for flannel use
 sudo mkdir -p /opt/cni/bin
 curl -O -L https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGINS_VERSION}/cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
 sudo tar -C /opt/cni/bin -xzf cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
 rm cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
-
-sudo mv kubectl /usr/local/bin
-# add kubectl autocomplete
-echo 'source <(kubectl completion bash)' >>~/.bashrc
 
 # disable swap
 sudo swapoff -a

@@ -8,4 +8,4 @@ CERTS_OPTS="--client-cert-auth \
 FORCE_HTTPS_OPTS="--advertise-client-urls https://127.0.0.1:2379 \
                   --listen-client-urls https://127.0.0.1:2379"
 
-./etcd --data-dir etcd-data $CERTS_OPTS $FORCE_HTTPS_OPTS
+bin/etcd --data-dir etcd-data $CERTS_OPTS $FORCE_HTTPS_OPTS

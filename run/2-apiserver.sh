@@ -12,7 +12,7 @@ ETCD_OPTS="--etcd-cafile=certs/ca.pem \
            --etcd-keyfile=certs/admin-key.pem \
            --etcd-servers=https://127.0.0.1:2379"
 
-./kube-apiserver ${CERTS_OPTS} ${ETCD_OPTS} \
+bin/kube-apiserver ${CERTS_OPTS} ${ETCD_OPTS} \
             --allow-privileged \
 	        --authorization-mode=Node,RBAC \
 	        --service-cluster-ip-range 10.244.0.0/16

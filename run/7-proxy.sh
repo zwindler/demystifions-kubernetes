@@ -1,5 +1,5 @@
 #!/bin/bash
-sudo ./kube-proxy --kubeconfig admin.conf
+sudo bin/kube-proxy --kubeconfig admin.conf
 
 # try this
 # kubectl expose deployment web --port=80

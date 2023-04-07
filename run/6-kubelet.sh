@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo ./kubelet --kubeconfig admin.conf \
+sudo bin/kubelet --kubeconfig admin.conf \
 --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock
 
 # If your server has swap (but we should have disabled it)

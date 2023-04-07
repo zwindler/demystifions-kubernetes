@@ -1,2 +1,2 @@
 #!/bin/bash
-./cilium install
+bin/cilium install

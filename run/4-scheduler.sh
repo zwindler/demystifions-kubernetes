@@ -1,2 +1,2 @@
 #!/bin/bash
-./kube-scheduler --kubeconfig admin.conf
+bin/kube-scheduler --kubeconfig admin.conf
