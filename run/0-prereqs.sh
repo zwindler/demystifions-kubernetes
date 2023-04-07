@@ -47,7 +47,7 @@ chmod 700 etcd-data
 wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
 tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' '*/containerd-shim-runc-v2' -f containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
 rm containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
-mv containerd* bin/
+mv containerd* ctr bin/
 
 curl https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH} -L -o runc
 chmod +x runc
