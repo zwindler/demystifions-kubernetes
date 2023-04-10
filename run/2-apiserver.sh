@@ -14,8 +14,7 @@ ETCD_OPTS="--etcd-cafile=certs/ca.pem \
 
 bin/kube-apiserver ${CERTS_OPTS} ${ETCD_OPTS} \
             --allow-privileged \
-	        --authorization-mode=Node,RBAC \
-	        --service-cluster-ip-range 10.244.0.0/16
+	        --authorization-mode=Node,RBAC
 
 
 # Try this

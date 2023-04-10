@@ -7,5 +7,4 @@ CERTS_OPTS="--cluster-signing-cert-file=certs/ca.pem \
 bin/kube-controller-manager ${CERTS_OPTS} \
 --kubeconfig admin.conf \
 --use-service-account-credentials \
---cluster-cidr=10.244.0.0/16 \
 --allocate-node-cidrs=true
