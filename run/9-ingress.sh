@@ -4,6 +4,29 @@ helm install traefik traefik/traefik \
               --set ports.web.nodePort=30080 \
               --set ports.websecure.nodePort=30443
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 if [ `uname -i` == 'x86_64' ]; then
   ARCH=amd64
 else
