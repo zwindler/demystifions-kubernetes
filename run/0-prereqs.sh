@@ -1,16 +1,4 @@
 #!/bin/bash
-sudo apt update -y
-sudo apt upgrade -y
-sudo apt install tmux curl golang-cfssl -y
-
-K8S_VERSION=1.26.3
-ETCD_VERSION=3.5.7
-CONTAINERD_VERSION=1.7.0
-RUNC_VERSION=1.1.4
-CILIUM_VERSION=0.13.2
-CNI_PLUGINS_VERSION=1.2.0
-
-mkdir -p bin/
 
 # change arch if necessary
 if [ -z "$1" ]; then ARCH=amd64; else ARCH=$1; fi
@@ -18,6 +6,19 @@ if [ -z "$1" ]; then ARCH=amd64; else ARCH=$1; fi
 if [ `uname -i` == 'aarch64' ]; then
   ARCH="arm64"
 fi
+
+sudo apt update -y
+sudo apt upgrade -y
+sudo apt install tmux curl golang-cfssl -y
+
+K8S_VERSION=1.27.0
+ETCD_VERSION=3.5.7
+CONTAINERD_VERSION=1.7.0
+RUNC_VERSION=1.1.4
+CILIUM_VERSION=0.13.2
+CNI_PLUGINS_VERSION=1.2.0
+
+mkdir -p bin/
 
 # YOLO
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -73,6 +74,11 @@ if [ $? -eq 0 ]; then
   sudo iptables -F
   sudo netfilter-persistent save
 fi
+
+# prepare ingress host value
+rm ingress.yaml
+git pull
+sed -i "s/host: dk.zwindler.fr/host: dk${ARCH}.zwindler.fr/" ingress.yaml
 
 # this will save me from forgetting generating certs
 run/0-gen-certs.sh
