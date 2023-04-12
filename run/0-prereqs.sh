@@ -7,7 +7,7 @@ if [ `uname -i` == 'aarch64' ]; then
   ARCH="arm64"
 fi
 
-git reset --hard origin/master
+git reset --hard origin/main
 
 sudo apt update -y
 sudo apt upgrade -y
