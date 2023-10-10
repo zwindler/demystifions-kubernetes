@@ -15,5 +15,5 @@ spec:
         app: web
     spec:
       containers:
-      - image: zwindler/dk
+      - image: zwindler/vhelloworld
         name: web
