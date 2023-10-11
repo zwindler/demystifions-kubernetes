@@ -8,6 +8,6 @@ spec:
   ports:
   - port: 3000
     protocol: TCP
-    targetPort: 80
+    targetPort: 8081
   selector:
     app: web
