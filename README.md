@@ -13,7 +13,8 @@ I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this V
 Get kubernetes binaries from the kubernetes release page. We want the "server" bundle for amd64 Linux.
 
 ```bash
-curl -L https://dl.k8s.io/v1.25.4/kubernetes-server-linux-amd64.tar.gz -o kubernetes-server-linux-amd64.tar.gz
+K8S_VERSION=1.29.0-alpha.3
+curl -L https://dl.k8s.io/v${K8S_VERSION}/kubernetes-server-linux-amd64.tar.gz -o kubernetes-server-linux-amd64.tar.gz
 tar -zxf kubernetes-server-linux-amd64.tar.gz
 for BINARY in kubectl kube-apiserver kube-scheduler kube-controller-manager kubelet kube-proxy;
 do
@@ -27,14 +28,15 @@ Note: jpetazzo's repo mentions a all-in-one binary call `hyperkube` which doesn'
 
 ### etcd
 
-See [https://github.com/etcd-io/etcd/releases/tag/v3.5.6](https://github.com/etcd-io/etcd/releases/tag/v3.5.6)
+See [https://github.com/etcd-io/etcd/releases/tag/v3.5.10](https://github.com/etcd-io/etcd/releases/tag/v3.5.10)
 
 Get binaries from the etcd release page. Pick the tarball for Linux amd64. In that tarball, we just need `etcd` and (just in case) `etcdctl`.
 
 This is a fancy one-liner to download the tarball and extract just what we need:
 
 ```bash
-curl -L https://github.com/etcd-io/etcd/releases/download/v3.5.6/etcd-v3.5.6-linux-amd64.tar.gz | 
+ETCD_VERSION=3.5.10
+curl -L https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz | 
   tar --strip-components=1 --wildcards -zx '*/etcd' '*/etcdctl'
 ```
 
@@ -42,13 +44,13 @@ Test it
 
 ```bash
 $ etcd --version
-etcd Version: 3.5.6
+etcd Version: 3.5.10
 Git SHA: cecbe35ce
 Go Version: go1.16.15
 Go OS/Arch: linux/amd64
 
 $ etcdctl version
-etcdctl version: 3.5.6
+etcdctl version: 3.5.10
 API version: 3.5
 ```
 
@@ -64,9 +66,9 @@ chmod 700 etcd-data
 Note: Jérôme was using Docker but since Kubernetes 1.24, dockershim, the component responsible for bridging the gap between docker daemon and kubernetes is no longer supported. I (like many other) switched to `containerd` but there are alternatives.
 
 ```bash
-wget https://github.com/containerd/containerd/releases/download/v1.6.10/containerd-1.6.10-linux-amd64.tar.gz
-tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' '*/containerd-shim-runc-v2' -f containerd-1.6.10-linux-amd64.tar.gz
-rm containerd-1.6.10-linux-amd64.tar.gz
+wget https://github.com/containerd/containerd/releases/download/v1.7.9/containerd-1.7.9-linux-amd64.tar.gz
+tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' '*/containerd-shim-runc-v2' -f containerd-1.7.9-linux-amd64.tar.gz
+rm containerd-1.7.9-linux-amd64.tar.gz
 ```
 
 ### runc
@@ -261,9 +263,9 @@ kubectl version --short
 You should get a similar output
 
 ```
-Client Version: v1.25.4
+Client Version: v1.29.0-alpha.3
 Kustomize Version: v4.5.7
-Server Version: v1.25.4
+Server Version: v1.29.0-alpha.3
 ```
 
 Check what APIs are available
@@ -303,13 +305,13 @@ spec:
         app: web
     spec:
       containers:
-      - image: zwindler/dk
-        name: nginx
+      - image: zwindler/vhelloworld
+        name: web
 EOF
 kubectl apply -f deploy.yaml
 
 #or
-#kubectl create deployment web --image=nginx
+#kubectl create deployment web --image=zwindler/vhelloworld
 ```
 
 You should get the following message:
@@ -492,7 +494,7 @@ Provided that DNS can resolve domain.tld to the IP of our Node, we can now acces
 
 But how can we connect to our website?
 
-By creating an Ingress that redirects traffic coming to dk.zwindler.fr to our docker image
+By creating an Ingress that redirects traffic coming to dk.domain.tld to our docker image
 
 ```yaml
 cat > ingress.yaml << EOF
@@ -503,7 +505,7 @@ metadata:
   namespace: default
 spec:
   rules:
-    - host: domain.tld
+    - host: dk.domain.tld
       http:
         paths:
           - path: /
@@ -517,7 +519,7 @@ EOF
 kubectl apply -f ingress.yaml
 ```
 
-[http://domain.tld:31889/](http://domain.tld:31889/) should now be available!! Congrats!
+[http://dk.domain.tld:31889/](http://dk.domain.tld:31889/) should now be available!! Congrats!
 
 ## Playing with our cluster
 
