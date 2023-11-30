@@ -27,7 +27,7 @@ mkdir -p bin/
 # YOLO
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-curl -L https://dl.k8s.io/v${K8S_VERSION}/kubernetes-server-linux-${ARCH}.tar.gz -o kubernetes-server-linux-${ARCH}.tar.gz
+curl -L https://dl.k8s.io/v$K8S_VERSION/kubernetes-server-linux-$ARCH.tar.gz -o kubernetes-server-linux-$ARCH.tar.gz
 tar -zxf kubernetes-server-linux-${ARCH}.tar.gz
 for BINARY in kubectl kube-apiserver kube-scheduler kube-controller-manager kubelet kube-proxy;
 do
