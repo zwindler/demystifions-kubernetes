@@ -14,8 +14,8 @@ sudo apt update -y
 sudo apt upgrade -y
 sudo apt install tmux curl golang-cfssl linux-image-generic-hwe-22.04 -y
 
-#K8S_VERSION=1.28.2
-K8S_VERSION=1.29.0-alpha.3
+#K8S_VERSION=1.28.4
+K8S_VERSION=1.29.0-rc.1
 ETCD_VERSION=3.5.10
 CONTAINERD_VERSION=1.7.9
 RUNC_VERSION=1.1.10
