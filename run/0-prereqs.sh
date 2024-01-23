@@ -15,12 +15,12 @@ sudo apt upgrade -y
 sudo apt install tmux curl golang-cfssl linux-image-generic-hwe-22.04 -y
 
 #K8S_VERSION=1.28.4
-K8S_VERSION=1.29.0-rc.1
-ETCD_VERSION=3.5.10
-CONTAINERD_VERSION=1.7.9
-RUNC_VERSION=1.1.10
-CILIUM_VERSION=0.15.14
-CNI_PLUGINS_VERSION=1.3.0
+K8S_VERSION=1.30.0-alpha.0
+ETCD_VERSION=3.5.11
+CONTAINERD_VERSION=1.7.12
+RUNC_VERSION=1.1.11
+CILIUM_CLI_VERSION=0.15.20
+CNI_PLUGINS_VERSION=1.4.0
 
 mkdir -p bin/
 
@@ -58,7 +58,7 @@ curl https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/r
 chmod +x runc
 sudo mv runc /usr/bin/
 
-wget https://github.com/cilium/cilium-cli/releases/download/v${CILIUM_VERSION}/cilium-linux-${ARCH}.tar.gz
+wget https://github.com/cilium/cilium-cli/releases/download/v${CILIUM_CLI_VERSION}/cilium-linux-${ARCH}.tar.gz
 tar xzf cilium-linux-${ARCH}.tar.gz
 rm cilium-linux-${ARCH}.tar.gz
 mv cilium bin/
