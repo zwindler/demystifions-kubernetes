@@ -9,12 +9,7 @@ This license requires that reusers give credit to the creator. It allows reusers
     BY: Credit must be given to you, the creator.
     SA: Adaptations must be shared under the same terms. 
 
-
 ## Prerequisites
-
-With his blessing, I was strongly inspired by Jérôme Petazzoni's excellent repo [dessine-moi-un-cluster](https://github.com/jpetazzo/dessine-moi-un-cluster) for this part and updated. Thanks a lot, Jérôme :).
-
-I also adapted parts of [Kelsey Hightower's kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (the TLS certs).
 
 I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this VM must be **kubernetes**.
 
@@ -598,3 +593,8 @@ Now, you should have a working "one node kubernetes cluster"
 You should clear the `/var/lib/kubelet` directory and remove the `/usr/bin/runc` and `/usr/local/bin/kubectl` binaries
 
 If you want to run the lab again, also clear etcd-data directory or even the whole demystifions-kubernetes folder and `git clone` it again
+
+## Similar resources 
+
+* Jérôme Petazzoni's [dessine-moi-un-cluster](https://github.com/jpetazzo/dessine-moi-un-cluster)
+* Kelsey Hightower's [kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way)
