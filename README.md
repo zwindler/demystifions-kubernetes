@@ -1,5 +1,15 @@
 # demystifions-kubernetes
 
+## License
+
+All the scripts, images, markdown text and presentation in this repository are licenced under license CC BY-SA 4.0 (Creative Commons Attribution-ShareAlike 4.0 International)
+
+This license requires that reusers give credit to the creator. It allows reusers to distribute, remix, adapt, and build upon the material in any medium or format, even for commercial purposes. If others remix, adapt, or build upon the material, they must license the modified material under identical terms.
+
+    BY: Credit must be given to you, the creator.
+    SA: Adaptations must be shared under the same terms. 
+
+
 ## Prerequisites
 
 With his blessing, I was strongly inspired by Jérôme Petazzoni's excellent repo [dessine-moi-un-cluster](https://github.com/jpetazzo/dessine-moi-un-cluster) for this part and updated. Thanks a lot, Jérôme :).
