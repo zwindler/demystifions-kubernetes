@@ -11,7 +11,7 @@ This license requires that reusers give credit to the creator. It allows reusers
 
 ## Prerequisites
 
-I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this VM must be **kubernetes**.
+I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this VM should be **kubernetes** (due to ✨*certificates stuff*✨ I don't want to bother you with).
 
 ### api-server & friends
 
