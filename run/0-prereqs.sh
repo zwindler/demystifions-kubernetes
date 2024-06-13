@@ -69,6 +69,7 @@ sudo mkdir -p /opt/cni/bin
 curl -O -L https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGINS_VERSION}/cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
 sudo tar -C /opt/cni/bin -xzf cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
 rm cni-plugins-linux-${ARCH}-v${CNI_PLUGINS_VERSION}.tgz
+sudo chown root: /opt/cni/bin
 
 # disable swap
 sudo swapoff -a
