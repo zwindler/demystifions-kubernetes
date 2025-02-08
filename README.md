@@ -18,7 +18,7 @@ I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this V
 Get kubernetes binaries from the kubernetes release page. We want the "server" bundle for amd64 Linux.
 
 ```bash
-K8S_VERSION=1.29.0-alpha.3
+K8S_VERSION=1.33.0-alpha.1
 curl -L https://dl.k8s.io/v${K8S_VERSION}/kubernetes-server-linux-amd64.tar.gz -o kubernetes-server-linux-amd64.tar.gz
 tar -zxf kubernetes-server-linux-amd64.tar.gz
 for BINARY in kubectl kube-apiserver kube-scheduler kube-controller-manager kubelet kube-proxy;
@@ -40,7 +40,7 @@ Get binaries from the etcd release page. Pick the tarball for Linux amd64. In th
 This is a fancy one-liner to download the tarball and extract just what we need:
 
 ```bash
-ETCD_VERSION=3.5.10
+ETCD_VERSION=3.5.18
 curl -L https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz | 
   tar --strip-components=1 --wildcards -zx '*/etcd' '*/etcdctl'
 ```
@@ -49,7 +49,7 @@ Test it
 
 ```bash
 $ etcd --version
-etcd Version: 3.5.10
+etcd Version: 3.5.18
 Git SHA: cecbe35ce
 Go Version: go1.16.15
 Go OS/Arch: linux/amd64
@@ -71,9 +71,11 @@ chmod 700 etcd-data
 Note: Jérôme was using Docker but since Kubernetes 1.24, dockershim, the component responsible for bridging the gap between docker daemon and kubernetes is no longer supported. I (like many other) switched to `containerd` but there are alternatives.
 
 ```bash
-wget https://github.com/containerd/containerd/releases/download/v1.7.9/containerd-1.7.9-linux-amd64.tar.gz
-tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' '*/containerd-shim-runc-v2' -f containerd-1.7.9-linux-amd64.tar.gz
-rm containerd-1.7.9-linux-amd64.tar.gz
+CONTAINERD_VERSION=2.0.2
+wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
+tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' '*/containerd-shim-runc-v2' -f containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
+rm containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
+mv containerd* ctr bin/
 ```
 
 ### runc
@@ -81,7 +83,8 @@ rm containerd-1.7.9-linux-amd64.tar.gz
 `containerd` is a high level container runtime which relies on `runc` (low level. Download it:
 
 ```bash
-curl https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 -L -o runc
+RUNC_VERSION=1.2.4
+curl https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH} -L -o runc
 chmod +x runc
 sudo mv runc /usr/bin/
 ```
