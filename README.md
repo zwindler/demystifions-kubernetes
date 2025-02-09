@@ -26,14 +26,13 @@ do
   mv kubernetes/server/bin/${BINARY} .
 done
 rm kubernetes-server-linux-amd64.tar.gz
-rm -rf kubernetes
 ```
 
 Note: jpetazzo's repo mentions a all-in-one binary call `hyperkube` which doesn't seem to exist anymore.
 
 ### etcd
 
-See [https://github.com/etcd-io/etcd/releases/tag/v3.5.10](https://github.com/etcd-io/etcd/releases/tag/v3.5.10)
+See [https://github.com/etcd-io/etcd/releases/tag/v3.5.18](https://github.com/etcd-io/etcd/releases/tag/v3.5.18)
 
 Get binaries from the etcd release page. Pick the tarball for Linux amd64. In that tarball, we just need `etcd` and (just in case) `etcdctl`.
 
@@ -50,12 +49,12 @@ Test it
 ```bash
 $ etcd --version
 etcd Version: 3.5.18
-Git SHA: cecbe35ce
-Go Version: go1.16.15
+Git SHA: 5bca08e
+Go Version: go1.22.11
 Go OS/Arch: linux/amd64
 
 $ etcdctl version
-etcdctl version: 3.5.10
+etcdctl version: 3.5.18
 API version: 3.5
 ```
 
