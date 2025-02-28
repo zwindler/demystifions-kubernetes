@@ -1,5 +1,5 @@
 #!/bin/bash
-mkdir -p certs && cd certs
+mkdir certs && cd certs
 
 {
 cat > ca-config.json <<EOF
@@ -17,6 +17,7 @@ cat > ca-config.json <<EOF
   }
 }
 EOF
+
 cat > ca-csr.json <<EOF
 {
   "CN": "Kubernetes",
@@ -32,6 +33,10 @@ cat > ca-csr.json <<EOF
       "OU": "CA",
       "ST": "Nouvelle Aquitaine"
     }
+  ],
+  "hosts": [
+    "127.0.0.1",
+    "localhost"
   ]
 }
 EOF
@@ -54,6 +59,10 @@ cat > admin-csr.json <<EOF
       "OU": "Démystifions Kubernetes",
       "ST": "Nouvelle Aquitaine"
     }
+  ],
+  "hosts": [
+    "127.0.0.1",
+    "localhost"
   ]
 }
 EOF
@@ -61,7 +70,6 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=127.0.0.1,10.0.0.1,10.244.0.1,kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local \
   -profile=kubernetes \
   admin-csr.json | cfssljson -bare admin
 }

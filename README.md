@@ -18,14 +18,28 @@ I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this V
 Get kubernetes binaries from the kubernetes release page. We want the "server" bundle for amd64 Linux.
 
 ```bash
-K8S_VERSION=1.33.0-alpha.1
-curl -L https://dl.k8s.io/v${K8S_VERSION}/kubernetes-server-linux-amd64.tar.gz -o kubernetes-server-linux-amd64.tar.gz
-tar -zxf kubernetes-server-linux-amd64.tar.gz
-for BINARY in kubectl kube-apiserver kube-scheduler kube-controller-manager kubelet kube-proxy;
+export K8S_VERSION=1.33.0-alpha.2
+if [ `uname -i` == 'aarch64' ]; then
+  export ARCH="arm64"
+else
+  export ARCH="amd64"
+fi
+
+mkdir -p bin/
+curl -L https://dl.k8s.io/v$K8S_VERSION/kubernetes-server-linux-$ARCH.tar.gz \
+  -o kubernetes-server-linux-$ARCH.tar.gz
+
+tar -zxf kubernetes-server-linux-${ARCH}.tar.gz
+
+for BINARY in kubectl kube-apiserver kube-scheduler kube-controller-manager \
+kubelet kube-proxy;
 do
-  mv kubernetes/server/bin/${BINARY} .
+  mv kubernetes/server/bin/${BINARY} bin/
 done
-rm kubernetes-server-linux-amd64.tar.gz
+
+rm kubernetes-server-linux-${ARCH}.tar.gz && rm -rf ./kubernetes/
+
+sudo mv bin/kubectl /usr/local/bin
 ```
 
 Note: jpetazzo's repo mentions a all-in-one binary call `hyperkube` which doesn't seem to exist anymore.
@@ -123,6 +137,7 @@ cat > ca-config.json <<EOF
   }
 }
 EOF
+
 cat > ca-csr.json <<EOF
 {
   "CN": "Kubernetes",
@@ -138,6 +153,10 @@ cat > ca-csr.json <<EOF
       "OU": "CA",
       "ST": "Nouvelle Aquitaine"
     }
+  ],
+  "hosts": [
+    "127.0.0.1",
+    "localhost"
   ]
 }
 EOF
@@ -164,6 +183,10 @@ cat > admin-csr.json <<EOF
       "OU": "Démystifions Kubernetes",
       "ST": "Nouvelle Aquitaine"
     }
+  ],
+  "hosts": [
+    "127.0.0.1",
+    "localhost"
   ]
 }
 EOF

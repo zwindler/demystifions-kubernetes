@@ -1,11 +1,13 @@
 #!/bin/bash
 
-# change arch if necessary
-if [ -z "$1" ]; then ARCH=amd64; else ARCH=$1; fi
 # in case I forget (which always happens)
 if [ `uname -i` == 'aarch64' ]; then
-  ARCH="arm64"
+  export ARCH="arm64"
+else
+  export ARCH="amd64"
 fi
+# change arch if necessary
+if [ -z "$1" ]; then ARCH=amd64; else ARCH=$1; fi
 
 git fetch origin
 git reset --hard origin/main
@@ -14,7 +16,7 @@ sudo apt update -y
 sudo apt upgrade -y
 sudo apt install tmux curl golang-cfssl linux-image-generic-hwe-22.04 -y
 
-K8S_VERSION=1.33.0-alpha.1
+K8S_VERSION=1.33.0-alpha.2
 ETCD_VERSION=3.5.18
 CONTAINERD_VERSION=2.0.2
 RUNC_VERSION=1.2.4
