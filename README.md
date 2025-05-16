@@ -9,11 +9,19 @@ This license requires that reusers give credit to the creator. It allows reusers
     BY: Credit must be given to you, the creator.
     SA: Adaptations must be shared under the same terms. 
 
+## Purpose
+
+Even though I'm a fan of Kelsey Hightower's "Kubernetes the hard way", I've always been a little bit frustrated that it lack the explaination of WHY we need each Kubernetes components. So I made my how lab / workshop, where the focus is on the various Kubernetes components, and what happens when we launch them step by step.
+
+Note: there is also a recorded / shorter version of this workshop where I give the explainations in live coding. It's in french but you can enable subtitles in your own langage and it should work.
+
+* [https://www.youtube.com/watch?v=Zv54GvQT6hI](https://www.youtube.com/watch?v=Zv54GvQT6hI)
+
 ## Prerequisites
 
 I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this VM should be **kubernetes** (due to ✨*certificates stuff*✨ I don't want to bother you with).
 
-### api-server & friends
+### Download binaries (api-server & friends)
 
 Get kubernetes binaries from the kubernetes release page. We want the "server" bundle for amd64 Linux.
 
