@@ -11,7 +11,7 @@ This license requires that reusers give credit to the creator. It allows reusers
 
 ## Purpose
 
-Even though I'm a fan of Kelsey Hightower's "Kubernetes the hard way", I've always been a little bit frustrated that it lack the explaination of WHY we need each Kubernetes components. So I made my how lab / workshop, where the focus is on the various Kubernetes components, and what happens when we launch them step by step.
+Even though I'm a fan of [Kelsey Hightower's "Kubernetes the hard way"](https://github.com/kelseyhightower/kubernetes-the-hard-way), I've always been a little bit frustrated that it lack the explaination of WHY we need each Kubernetes components. So I made my how lab / workshop, where the focus is on the various Kubernetes components, and what happens when we launch them step by step.
 
 Note: there is also a recorded / shorter version of this workshop where I give the explainations in live coding. It's in french but you can enable subtitles in your own langage and it should work.
 
