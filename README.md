@@ -26,7 +26,7 @@ I'm going to launch this on a clean VM running Ubuntu 22.04. Hostname for this V
 Get kubernetes binaries from the kubernetes release page. We want the "server" bundle for amd64 Linux.
 
 ```bash
-export K8S_VERSION=1.33.0-alpha.2
+export K8S_VERSION=1.36.0-beta.0
 if [ `uname -i` == 'aarch64' ]; then
   export ARCH="arm64"
 else
@@ -54,30 +54,31 @@ Note: jpetazzo's repo mentions a all-in-one binary call `hyperkube` which doesn'
 
 ### etcd
 
-See [https://github.com/etcd-io/etcd/releases/tag/v3.5.18](https://github.com/etcd-io/etcd/releases/tag/v3.5.18)
+See [https://github.com/etcd-io/etcd/releases/tag/v3.6.9](https://github.com/etcd-io/etcd/releases/tag/v3.6.9)
 
 Get binaries from the etcd release page. Pick the tarball for Linux amd64. In that tarball, we just need `etcd` and (just in case) `etcdctl`.
 
 This is a fancy one-liner to download the tarball and extract just what we need:
 
 ```bash
-ETCD_VERSION=3.5.18
-curl -L https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz | 
+ETCD_VERSION=3.6.9
+curl -L https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz | 
   tar --strip-components=1 --wildcards -zx '*/etcd' '*/etcdctl'
+mv etcd etcdctl bin/
 ```
 
 Test it
 
 ```bash
 $ etcd --version
-etcd Version: 3.5.18
-Git SHA: 5bca08e
-Go Version: go1.22.11
+etcd Version: 3.6.9
+Git SHA: Not provided
+Go Version: go1.23.x
 Go OS/Arch: linux/amd64
 
 $ etcdctl version
-etcdctl version: 3.5.18
-API version: 3.5
+etcdctl version: 3.6.9
+API version: 3.6
 ```
 
 Create a directory to host etcd database files
@@ -92,7 +93,7 @@ chmod 700 etcd-data
 Note: Jérôme was using Docker but since Kubernetes 1.24, dockershim, the component responsible for bridging the gap between docker daemon and kubernetes is no longer supported. I (like many other) switched to `containerd` but there are alternatives.
 
 ```bash
-CONTAINERD_VERSION=2.0.2
+CONTAINERD_VERSION=2.2.2
 wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
 tar --strip-components=1 --wildcards -zx '*/ctr' '*/containerd' '*/containerd-shim-runc-v2' -f containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
 rm containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
@@ -104,7 +105,7 @@ mv containerd* ctr bin/
 `containerd` is a high level container runtime which relies on `runc` (low level. Download it:
 
 ```bash
-RUNC_VERSION=1.2.4
+RUNC_VERSION=1.4.1
 curl https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH} -L -o runc
 chmod +x runc
 sudo mv runc /usr/bin/
@@ -114,7 +115,7 @@ sudo mv runc /usr/bin/
 
 We need `cfssl` tool to generate certificates. Install it (see [github.com/cloudflare/cfssl](https://github.com/cloudflare/cfssl#installation)).
 
-To install calico (the CNI plugin in this tutorial), the easiest way is to use `helm` (see [helm.sh/docs](https://helm.sh/docs/intro/install/)).
+To install the CNI plugin (Cilium by default, or Calico as an alternative), the easiest way is to use `helm` (see [helm.sh/docs](https://helm.sh/docs/intro/install/)).
 
 Optionally, to ease this tutorial, you should also have a mean to easily switch between terminals. `tmux` or `screen` are your friends. Here is a [tmux cheat sheet](https://tmuxcheatsheet.com/) should you need it ;-).
 
@@ -255,7 +256,7 @@ We can't start the API server until we have an `etcd` backend to support it's pe
 #create a new tmux session for etcd
 '[ctrl]-b' and then ': new -s etcd'
 
-./etcd --advertise-client-urls https://127.0.0.1:2379 \
+bin/etcd --advertise-client-urls https://127.0.0.1:2379 \
 --client-cert-auth \
 --data-dir etcd-data \
 --cert-file=certs/admin.pem \
@@ -274,7 +275,7 @@ Now we can start the `kube-apiserver`:
 #create a new tmux session for apiserver
 '[ctrl]-b' and then ': new -s apiserver'
 
-./kube-apiserver --allow-privileged \
+bin/kube-apiserver --allow-privileged \
 --authorization-mode=Node,RBAC \
 --client-ca-file=certs/ca.pem \
 --etcd-cafile=certs/ca.pem \
@@ -301,9 +302,9 @@ kubectl version --short
 You should get a similar output
 
 ```
-Client Version: v1.29.0-alpha.3
-Kustomize Version: v4.5.7
-Server Version: v1.29.0-alpha.3
+Client Version: v1.36.0-beta.0
+Kustomize Version: v5.5.0
+Server Version: v1.36.0-beta.0
 ```
 
 Check what APIs are available
@@ -362,7 +363,7 @@ But... nothing happens
 ```bash
 kubectl get deploy
 NAME   READY   UP-TO-DATE   AVAILABLE   AGE
-web    0/1     0            0           3m38s
+web    0/2     0            0           3m38s
 
 kubectl get pods
 No resources found in default namespace.
@@ -378,13 +379,15 @@ We can start the controller manager to fix this.
 #create a new tmux session for the controller manager
 '[ctrl]-b' and then ': new -s controller'
 
-./kube-controller-manager \
+bin/kube-controller-manager \
 --kubeconfig admin.conf \
 --cluster-signing-cert-file=certs/ca.pem \
 --cluster-signing-key-file=certs/ca-key.pem \
 --service-account-private-key-file=certs/admin-key.pem \
 --use-service-account-credentials \
---root-ca-file=certs/ca.pem
+--root-ca-file=certs/ca.pem \
+--cluster-cidr=10.0.0.0/16 \
+--allocate-node-cidrs=true
 [...]
 I1130 14:36:38.454244    1772 garbagecollector.go:163] Garbage collector: all resource monitors have synced. Proceeding to collect garbage
 ```
@@ -402,7 +405,7 @@ Let's now start the `kube-scheduler`:
 ```bash
 #create a new tmux session for scheduler
 '[ctrl]-b' and then ': new -s scheduler'
-./kube-scheduler --kubeconfig admin.conf
+bin/kube-scheduler --kubeconfig admin.conf
 
 [...]
 I1201 12:54:40.814609    2450 secure_serving.go:210] Serving securely on [::]:10259
@@ -423,7 +426,7 @@ Let's start the container runtime `containerd` on our machine:
 ```bash
 #create a new tmux session for containerd
 '[ctrl]-b' and then ': new -s containerd'
-sudo ./containerd
+sudo bin/containerd
 [...]
 INFO[2022-12-01T11:03:37.616892592Z] serving...                                    address=/run/containerd/containerd.sock
 INFO[2022-12-01T11:03:37.617062671Z] containerd successfully booted in 0.038455s  
@@ -441,8 +444,7 @@ The role of the kubelet is also to talk with containerd to launch/monitor/kill t
 ```bash
 #create a new tmux session for kubelet
 '[ctrl]-b' and then ': new -s kubelet'
-sudo ./kubelet \
---container-runtime=remote \
+sudo bin/kubelet \
 --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \
 --fail-swap-on=false \
 --kubeconfig admin.conf \
@@ -461,13 +463,13 @@ E1211 21:13:32.558180   27332 kubelet.go:2373] "Container runtime network not re
 
 To deal with networking inside Kubernetes, we need a few last things. A `kube-proxy` (which in some cases can be removed) and a CNI plugin. 
 
-For CNI plugin, I chose Calico but there are many more options out there. Here I just deploy the chart and let Calico do the magic.
+For CNI plugin, I use Cilium by default (see `run/7-cilium.sh`) but Calico works as well. Here is how to deploy Calico using Helm:
 
 ```bash
 helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
 
 kubectl create namespace tigera-operator
-helm install calico projectcalico/tigera-operator --version v3.24.5 --namespace tigera-operator
+helm install calico projectcalico/tigera-operator --version v3.31.4 --namespace tigera-operator
 ```
 
 ### kube-proxy
@@ -477,7 +479,7 @@ Let's start the `kube-proxy`:
 ```bash
 #create a new tmux session for proxy
 '[ctrl]-b' and then ': new -s proxy'
-sudo ./kube-proxy --kubeconfig admin.conf
+sudo bin/kube-proxy --kubeconfig admin.conf
 ```
 
 Then, we are going to create a ClusterIP service to obtain a stable IP address (and load balancer) for our deployment.
@@ -494,7 +496,7 @@ spec:
   ports:
   - port: 3000
     protocol: TCP
-    targetPort: 80
+    targetPort: 8081
   selector:
     app: web
 EOF
@@ -515,20 +517,22 @@ Finally, to allow us to connect to our Pod using a nice URL in our brower, I'll 
 helm repo add traefik https://traefik.github.io/charts
 "traefik" has been added to your repositories
 
-helm install traefik traefik/traefik
+helm install traefik traefik/traefik \
+  --set ports.web.nodePort=30080 \
+  --set ports.websecure.nodePort=30443
 [...]
-Traefik Proxy v2.9.5 has been deployed successfully
+Traefik Proxy has been deployed successfully
 
 kubectl get svc
 NAME         TYPE           CLUSTER-IP   EXTERNAL-IP   PORT(S)                      AGE
 kubernetes   ClusterIP      10.0.0.1     <none>        443/TCP                      58m
-traefik      LoadBalancer   10.0.0.86    <pending>     80:31889/TCP,443:31297/TCP   70s
+traefik      LoadBalancer   10.0.0.86    <pending>     80:30080/TCP,443:30443/TCP   70s
 web          ClusterIP      10.0.0.34    <none>        3000/TCP                     21m
 ```
 
-Notice the Ports on the traefik line: **80:31889/TCP,443:31297/TCP** in my example.
+Notice the Ports on the traefik line: **80:30080/TCP,443:30443/TCP** in my example.
 
-Provided that DNS can resolve domain.tld to the IP of our Node, we can now access Traefik from the Internet by using http://domain.tld:31889 (and https://domain.tld:31297).
+Provided that DNS can resolve domain.tld to the IP of our Node, we can now access Traefik from the Internet by using http://domain.tld:30080 (and https://domain.tld:30443).
 
 But how can we connect to our website?
 
@@ -547,7 +551,7 @@ spec:
       http:
         paths:
           - path: /
-            pathType: Exact
+            pathType: Prefix
             backend:
               service:
                 name:  web
@@ -557,7 +561,7 @@ EOF
 kubectl apply -f ingress.yaml
 ```
 
-[http://dk.domain.tld:31889/](http://dk.domain.tld:31889/) should now be available!! Congrats!
+[http://dk.domain.tld:30080/](http://dk.domain.tld:30080/) should now be available!! Congrats!
 
 ## Playing with our cluster
 

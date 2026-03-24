@@ -295,7 +295,7 @@ Component responsible of creating/managing dynamically `iptables` rules to route
 Routing HTTP(S) requests
 - **IngressController** is a third party component managing **Ingress**
 
-Note: **Ingress API** is being replaced by tge **Gateway API** (more powerful and more agnostic)
+Note: **Ingress API** is being replaced by the **Gateway API** (more powerful and more agnostic)
 - [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/)
 
 ![bg fit right:40%](../binaries/ingress.yaml.png)

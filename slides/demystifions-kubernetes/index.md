@@ -79,7 +79,7 @@ blockquote:after{
 ### But du jeu
 
 - Déployer un serveur web en V(lang) à l'aide de manifests YAML
-- Déployer Kubernetes **1.31.0-alpha.0** (l'amour du risque), binaire par binaire
+- Déployer Kubernetes **1.36.0-beta.0** (l'amour du risque), binaire par binaire
 
 <br/>
 <br/>
